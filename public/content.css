@@ -1,0 +1,806 @@
+/* ─── Stylesheet for LeetCode Companion Sidebar ─── */
+
+:host {
+  all: initial;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Scrollbar Customization */
+.lc-scrollable-content::-webkit-scrollbar {
+  width: 6px;
+}
+.lc-scrollable-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lc-scrollable-content::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
+
+/* ─── Sidebar Base styles ─── */
+.lc-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 380px;
+  height: 100vh;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  z-index: 999999;
+  font-family: 'Inter', sans-serif;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Positions configuration */
+.lc-sidebar.right {
+  right: 0;
+  transform: translateX(100%);
+}
+.lc-sidebar.left {
+  left: 0;
+  transform: translateX(-100%);
+}
+
+.lc-sidebar.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ─── Themes Configuration ─── */
+
+/* Dark Theme */
+.lc-sidebar.theme-dark {
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+.lc-sidebar.theme-dark .lc-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.lc-sidebar.theme-dark .lc-scrollable-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.lc-sidebar.theme-dark .lc-tab-link {
+  color: #9ca3af;
+  border-bottom: 2px solid transparent;
+}
+.lc-sidebar.theme-dark .lc-tab-link.active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+.lc-sidebar.theme-dark .lc-problem-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.lc-sidebar.theme-dark .lc-problem-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+}
+.lc-sidebar.theme-dark .lc-card-title {
+  color: #f3f4f6;
+}
+.lc-sidebar.theme-dark .lc-card-explanation {
+  color: #9ca3af;
+}
+.lc-sidebar.theme-dark .lc-bar-wrapper {
+  background: rgba(255, 255, 255, 0.08);
+}
+.lc-sidebar.theme-dark .lc-bar-fill {
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+}
+.lc-sidebar.theme-dark .lc-company-name {
+  color: #f3f4f6;
+}
+.lc-sidebar.theme-dark .lc-company-count {
+  color: #9ca3af;
+}
+.lc-sidebar.theme-dark .lc-company-tag {
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d5db;
+}
+.lc-sidebar.theme-dark .lc-prediction-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.05));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+.lc-sidebar.theme-dark .lc-pred-title {
+  color: #fff;
+}
+.lc-sidebar.theme-dark .lc-pred-desc {
+  color: #d1d5db;
+}
+.lc-sidebar.theme-dark .lc-paired-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.lc-sidebar.theme-dark .lc-paired-title {
+  color: #d1d5db;
+}
+.lc-sidebar.theme-dark .lc-paired-title:hover {
+  color: #6366f1;
+}
+.lc-sidebar.theme-dark .lc-close-btn {
+  color: #9ca3af;
+}
+.lc-sidebar.theme-dark .lc-close-btn:hover {
+  color: #fff;
+}
+.lc-sidebar.theme-dark .lc-contest-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #f3f4f6;
+}
+
+/* Light Theme */
+.lc-sidebar.theme-light {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  color: #1f2937;
+}
+.lc-sidebar.theme-light .lc-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.lc-sidebar.theme-light .lc-scrollable-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+.lc-sidebar.theme-light .lc-tab-link {
+  color: #4b5563;
+  border-bottom: 2px solid transparent;
+}
+.lc-sidebar.theme-light .lc-tab-link.active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+.lc-sidebar.theme-light .lc-problem-card {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+.lc-sidebar.theme-light .lc-problem-card:hover {
+  border-color: rgba(79, 70, 229, 0.3);
+  background: rgba(0, 0, 0, 0.03);
+}
+.lc-sidebar.theme-light .lc-card-title {
+  color: #111827;
+}
+.lc-sidebar.theme-light .lc-card-explanation {
+  color: #4b5563;
+}
+.lc-sidebar.theme-light .lc-bar-wrapper {
+  background: rgba(0, 0, 0, 0.06);
+}
+.lc-sidebar.theme-light .lc-bar-fill {
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+}
+.lc-sidebar.theme-light .lc-company-name {
+  color: #111827;
+}
+.lc-sidebar.theme-light .lc-company-count {
+  color: #4b5563;
+}
+.lc-sidebar.theme-light .lc-company-tag {
+  background: rgba(0, 0, 0, 0.04);
+  color: #374151;
+}
+.lc-sidebar.theme-light .lc-prediction-card {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(124, 58, 237, 0.04));
+  border: 1px solid rgba(79, 70, 229, 0.15);
+}
+.lc-sidebar.theme-light .lc-pred-title {
+  color: #111827;
+}
+.lc-sidebar.theme-light .lc-pred-desc {
+  color: #374151;
+}
+.lc-sidebar.theme-light .lc-paired-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+.lc-sidebar.theme-light .lc-paired-title {
+  color: #374151;
+}
+.lc-sidebar.theme-light .lc-paired-title:hover {
+  color: #4f46e5;
+}
+.lc-sidebar.theme-light .lc-close-btn {
+  color: #4b5563;
+}
+.lc-sidebar.theme-light .lc-close-btn:hover {
+  color: #111827;
+}
+.lc-sidebar.theme-light .lc-contest-card {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  color: #111827;
+}
+
+
+/* ─── Header Elements ─── */
+.lc-header {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lc-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+.lc-meta-section {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.lc-id-badge {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+.lc-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.lc-problem-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.25;
+  flex: 1;
+}
+.lc-action-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.lc-close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.lc-bookmark-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+}
+.lc-bookmark-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #eab308;
+}
+.lc-bookmark-btn.lc-sidebar.theme-light:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.lc-bookmark-btn.active {
+  color: #eab308;
+}
+
+/* ─── Difficulty Badges ─── */
+.lc-diff-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.lc-diff-badge.easy {
+  background: rgba(0, 184, 163, 0.15);
+  color: #00b8a3;
+}
+.lc-diff-badge.medium {
+  background: rgba(255, 192, 30, 0.15);
+  color: #ffc01e;
+}
+.lc-diff-badge.hard {
+  background: rgba(239, 71, 67, 0.15);
+  color: #ef4743;
+}
+
+.lc-diff-badge-mini {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.lc-diff-badge-mini.easy {
+  background: rgba(0, 184, 163, 0.1);
+  color: #00b8a3;
+}
+.lc-diff-badge-mini.medium {
+  background: rgba(255, 192, 30, 0.1);
+  color: #ffc01e;
+}
+.lc-diff-badge-mini.hard {
+  background: rgba(239, 71, 67, 0.1);
+  color: #ef4743;
+}
+
+/* ─── Navigation Tabs ─── */
+.lc-tabs {
+  display: flex;
+  padding: 0 16px;
+  gap: 8px;
+}
+.lc-tab-link {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 12px 4px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+/* ─── Layout containers ─── */
+.lc-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.lc-tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+}
+.lc-tab-panel.active {
+  display: flex;
+}
+
+/* Loading & Empty States */
+.lc-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+}
+.lc-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(99, 102, 241, 0.15);
+  border-radius: 50%;
+  border-top-color: #6366f1;
+  animation: lc-spin 0.8s linear infinite;
+}
+@keyframes lc-spin {
+  to { transform: rotate(360deg); }
+}
+.lc-loading-text {
+  font-size: 13px;
+  opacity: 0.6;
+}
+.lc-empty-state {
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+  opacity: 0.5;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.lc-section-header {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  margin-bottom: 12px;
+}
+
+/* ─── Tab 1: Similar Problems cards ─── */
+.lc-problems-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lc-problem-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lc-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lc-card-row.mini {
+  justify-content: flex-start;
+  gap: 8px;
+  align-items: center;
+}
+.lc-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  line-height: 1.35;
+}
+.lc-card-title:hover {
+  text-decoration: underline;
+}
+.lc-score-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.lc-card-explanation {
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.lc-list-badges-row {
+  display: flex;
+  gap: 4px;
+}
+.lc-list-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.lc-list-badge.b75 {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+.lc-list-badge.nc {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+.lc-list-badge.g75 {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b881;
+}
+
+/* ─── Tab 2: Company Metrics ─── */
+.lc-company-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lc-company-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lc-company-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lc-company-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.lc-company-count {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.lc-bar-wrapper {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  width: 100%;
+}
+.lc-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease-out;
+}
+.lc-company-meta-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+.lc-company-tag {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ─── Tab 3: Predictions & Contest cards ─── */
+.lc-contest-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lc-contest-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lc-contest-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.lc-contest-pos {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6366f1;
+}
+.lc-contest-date {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.lc-prediction-card {
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lc-prediction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.lc-pred-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.lc-pred-title:hover {
+  text-decoration: underline;
+}
+.lc-pred-desc {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.lc-pred-action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+.lc-pred-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.lc-pred-btn:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+}
+
+.lc-paired-list {
+  display: flex;
+  flex-direction: column;
+}
+.lc-paired-item {
+  padding: 10px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lc-paired-title {
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.lc-paired-title:hover {
+  text-decoration: underline;
+}
+
+/* ─── Floating Toggle Button ─── */
+.lc-toggle-btn {
+  position: fixed;
+  bottom: 80px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s, box-shadow 0.2s;
+  z-index: 999998;
+}
+.lc-toggle-btn:hover {
+  background: #4f46e5;
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
+}
+
+/* Position mapping for floating btn */
+.lc-toggle-btn.right {
+  right: 24px;
+}
+.lc-toggle-btn.left {
+  left: 24px;
+}
+
+/* Handle floating button state when sidebar is open */
+.lc-toggle-btn.right.active {
+  transform: translateX(-356px) rotate(180deg);
+}
+.lc-toggle-btn.left.active {
+  transform: translateX(356px) rotate(180deg);
+}
+
+/* Pulse animation on toggle button */
+.lc-toggle-btn-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(99, 102, 241, 0.6);
+  animation: lc-pulse 2s infinite;
+  pointer-events: none;
+}
+@keyframes lc-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Tooltip on toggle button */
+.lc-toggle-tooltip {
+  position: absolute;
+  background: #111827;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.2s;
+}
+.lc-toggle-btn.right .lc-toggle-tooltip {
+  right: calc(100% + 12px);
+  transform: translateX(8px);
+}
+.lc-toggle-btn.left .lc-toggle-tooltip {
+  left: calc(100% + 12px);
+  transform: translateX(-8px);
+}
+.lc-toggle-btn:hover .lc-toggle-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Company Search in Sidebar */
+.lc-company-search-box {
+  position: relative;
+  margin-bottom: 16px;
+  width: 100%;
+}
+.lc-company-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.lc-sidebar.theme-dark .lc-company-search-input {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #f3f4f6;
+}
+.lc-sidebar.theme-light .lc-company-search-input {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #111827;
+}
+.lc-company-search-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+.lc-sidebar.theme-light .lc-company-search-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+.lc-company-suggestions {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  margin-top: 4px;
+}
+.lc-sidebar.theme-light .lc-company-suggestions {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+.lc-company-suggestions::-webkit-scrollbar {
+  width: 4px;
+}
+.lc-company-suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lc-company-suggestions::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.lc-sidebar.theme-light .lc-company-suggestions::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+.lc-company-suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: inherit;
+  transition: background-color 0.15s;
+}
+.lc-sidebar.theme-dark .lc-company-suggestion-item {
+  color: #d1d5db;
+}
+.lc-sidebar.theme-light .lc-company-suggestion-item {
+  color: #374151;
+}
+.lc-company-suggestion-item:hover, .lc-company-suggestion-item.active-selection {
+  background-color: rgba(99, 102, 241, 0.2);
+}
+.lc-sidebar.theme-light .lc-company-suggestion-item:hover, 
+.lc-sidebar.theme-light .lc-company-suggestion-item.active-selection {
+  background-color: rgba(79, 70, 229, 0.1);
+}
+.lc-company-suggestion-item.active-selection {
+  background-color: #6366f1;
+  color: #ffffff;
+}
+.lc-sidebar.theme-light .lc-company-suggestion-item.active-selection {
+  background-color: #4f46e5;
+  color: #ffffff;
+}

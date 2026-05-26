@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "LeetCode Companion",
+  "version": "1.0.0",
+  "description": "Intelligent interview companion for LeetCode — similar problems, company insights, and pattern recognition.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Alt+L",
+        "mac": "Alt+L"
+      },
+      "description": "Toggle LeetCode Companion Sidebar"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "content.css"],
+      "matches": ["https://leetcode.com/*"]
+    }
+  ]
+}
