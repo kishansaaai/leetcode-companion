@@ -821,6 +821,35 @@ function renderSidebarContent() {
       });
     }
   }
+
+  // Bind Code Block copy buttons inside AI Review tab
+  if (activeTabId === 'ai-review' && sidebarElement) {
+    const copyButtons = sidebarElement.querySelectorAll('.lc-code-block-copy-btn');
+    copyButtons.forEach(button => {
+      const btn = button as HTMLElement;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const codeEncoded = btn.getAttribute('data-code');
+        if (codeEncoded) {
+          const code = decodeURIComponent(codeEncoded);
+          navigator.clipboard.writeText(code).then(() => {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Copied!
+            `;
+            btn.style.color = '#22c55e';
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+              btn.style.color = '';
+            }, 2000);
+          });
+        }
+      });
+    });
+  }
 }
 
 /**
@@ -854,9 +883,24 @@ function parseMarkdown(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Code blocks: ```cpp ... ```
-  html = html.replace(/```(?:[a-zA-Z0-9+#]+)?\n([\s\S]*?)\n```/g, (match, code) => {
-    return `<pre class="lc-markdown-code-block"><code>${code}</code></pre>`;
+  // Code blocks: ```cpp ... ``` with optional language
+  html = html.replace(/```([a-zA-Z0-9+#]*)\r?\n([\s\S]*?)\r?\n```/g, (match, lang, code) => {
+    const displayLang = lang ? lang.toUpperCase() : 'CODE';
+    return `
+      <div class="lc-code-block-container">
+        <div class="lc-code-block-header">
+          <span class="lc-code-block-lang">${displayLang}</span>
+          <button class="lc-code-block-copy-btn" data-code="${encodeURIComponent(code)}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+        </div>
+        <pre class="lc-markdown-code-block"><code>${code}</code></pre>
+      </div>
+    `;
   });
 
   // Inline code: `code`
@@ -880,10 +924,10 @@ function parseMarkdown(text: string): string {
   html = html.replace(/((?:<li class="lc-markdown-li">[\s\S]*?<\/li>\s*)+)/g, '<ul class="lc-markdown-ul">$1</ul>');
 
   // Line breaks for general text, preserving HTML tags
-  const segments = html.split(/(<pre[\s\S]*?<\/pre>)/);
+  const segments = html.split(/(<div class="lc-code-block-container"[\s\S]*?<\/pre>\s*<\/div>)/);
   for (let i = 0; i < segments.length; i++) {
-    if (!segments[i].startsWith('<pre')) {
-      segments[i] = segments[i].replace(/\n/g, '<br>');
+    if (!segments[i].startsWith('<div class="lc-code-block-container"')) {
+      segments[i] = segments[i].replace(/\r?\n/g, '<br>');
     }
   }
   html = segments.join('');

@@ -1082,3 +1082,73 @@
 .lc-sidebar.theme-light .lc-markdown-hr {
   background: rgba(0, 0, 0, 0.08);
 }
+
+/* ─── Premium Code Block Container ─── */
+.lc-code-block-container {
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 14px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.lc-sidebar.theme-light .lc-code-block-container {
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.lc-code-block-header {
+  background: rgba(30, 41, 59, 0.9);
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.lc-sidebar.theme-light .lc-code-block-header {
+  background: #f1f5f9;
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+.lc-code-block-lang {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+.lc-sidebar.theme-light .lc-code-block-lang {
+  color: #475569;
+}
+
+.lc-code-block-copy-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+.lc-sidebar.theme-light .lc-code-block-copy-btn {
+  color: #475569;
+}
+.lc-code-block-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.lc-sidebar.theme-light .lc-code-block-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #0f172a;
+}
+
+/* Adjust code block margins because container wraps it */
+.lc-markdown-code-block {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
