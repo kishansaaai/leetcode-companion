@@ -63,25 +63,41 @@ if (chrome.commands) {
   });
 }
 
-async function callGeminiApi(apiKey: string, prompt: string, systemPrompt: string, model: string = 'gemini-2.5-flash'): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+async function callGeminiApi(
+  apiKey: string,
+  prompt: string,
+  systemPrompt: string,
+  model: string = 'gemini-2.0-flash',
+  apiVersion: string = 'v1'
+): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
+  
+  const requestBody: any = {
+    contents: [{
+      parts: [{
+        text: apiVersion === 'v1beta'
+          ? prompt
+          : `SYSTEM INSTRUCTION:\n${systemPrompt}\n\nUSER PROMPT:\n${prompt}`
+      }]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 3000
+    }
+  };
+
+  if (apiVersion === 'v1beta') {
+    requestBody.systemInstruction = {
+      parts: [{ text: systemPrompt }]
+    };
+  }
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      systemInstruction: {
-        parts: [{ text: systemPrompt }]
-      },
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 3000
-      }
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -155,160 +171,40 @@ chrome.runtime.onMessage.addListener((message: MessagePayload, sender, sendRespo
 
       const systemPrompt = `You are an elite LeetCode interviewer AI integrated inside a Chrome extension.
 
-The user has written a LeetCode solution.
+Your task is to deeply analyze the user's solution and provide a concise, high-impact review.
 
-Your task is to deeply analyze the solution and provide an advanced interview-style code review.
-
-IMPORTANT:
-Do NOT simply explain the code.
-Act like a FAANG interviewer + competitive programming mentor.
-
-Your response must contain these exact sections:
+Your response must contain these exact sections IN THIS ORDER and nothing else:
 
 ━━━━━━━━━━━━━━━━━━━━
-🧠 Solution Understanding
+📊 Code Ratings
 ━━━━━━━━━━━━━━━━━━━━
-- Explain what the code is doing
-- Identify the algorithm/pattern used
-- Mention whether this is:
-  - brute force
-  - better
-  - optimal
-  - interview-optimal
-
-━━━━━━━━━━━━━━━━━━━━
-⚡ Complexity Analysis
-━━━━━━━━━━━━━━━━━━━━
-Provide:
-- Time Complexity
-- Space Complexity
-- Hidden STL complexities
-- Recursion stack complexity if applicable
-
-Explain:
-- WHY the complexity occurs
-- Which operations dominate runtime
+Rate the code on each of these 6 dimensions from 1 to 10. Output each rating on its own line in EXACTLY this format (no other text on these lines):
+[RATING:Readability:X/10]
+[RATING:Code Style:X/10]
+[RATING:Naming:X/10]
+[RATING:Efficiency:X/10]
+[RATING:Edge Cases:X/10]
+[RATING:Overall:X/10]
 
 ━━━━━━━━━━━━━━━━━━━━
-🔍 Deep Optimization Review
+🧠 Solution & Complexity
 ━━━━━━━━━━━━━━━━━━━━
-Analyze the code for:
-
-Performance Issues:
-- Unnecessary loops
-- Extra traversals
-- Repeated calculations
-- Redundant conditions
-- Unnecessary sorting
-- Unnecessary copying
-- Inefficient STL usage
-- Avoidable recursion
-- Unnecessary memory usage
-
-Space Optimization:
-- Can extra arrays/vectors/maps be removed?
-- Can the solution be converted to O(1) extra space?
-- Can in-place modification be used safely?
-
-Code Quality:
-- Poor naming
-- Large repetitive blocks
-- Bad readability
-- Unsafe indexing
-- Overflow risks
-- Risky pointer usage
-- Unclear logic
-- Hardcoded behavior
-
-Interview Review:
-- Would this pass a real FAANG interview?
-- Is the solution easy to explain verbally?
-- Does the code look polished?
-- Does it demonstrate strong DSA understanding?
+- **Pattern/Algorithm**: [Identify the pattern, e.g. Two Pointers, Sliding Window]
+- **Time Complexity**: [O(...) with a 1-sentence explanation of why]
+- **Space Complexity**: [O(...) with a 1-sentence explanation of why]
 
 ━━━━━━━━━━━━━━━━━━━━
-🚀 Improvement Suggestions
+🚀 Critical Improvements
 ━━━━━━━━━━━━━━━━━━━━
-Tell the user:
-- EXACTLY where the code can improve
-- Whether a better algorithm exists
-- Whether STL can simplify the implementation
-- Whether time or space can be reduced
-- Whether readability should be prioritized over micro-optimization
-- Whether this solution scales for large constraints
-
-IMPORTANT:
-Even if the code is accepted,
-still suggest:
-- Cleaner syntax
-- Better variable names
-- Better loops
-- Better conditions
-- Better STL usage
-- Better interview structure
+- [Highlight only the strictly required improvements regarding performance, safety, or naming. Keep it extremely brief (max 1-2 sentences per point, max 3 bullet points total).]
 
 ━━━━━━━━━━━━━━━━━━━━
 ✨ Improved Code
 ━━━━━━━━━━━━━━━━━━━━
-Generate:
-
-1. Cleaner Version
-- More readable
-- Better structure
-- Better naming
-
-2. Optimized Version
-- Best practical optimization
-
-3. Interview Version
-- Most ideal version to write in interviews
-
-Preserve correctness.
-
-━━━━━━━━━━━━━━━━━━━━
-📌 Line-by-Line Suggestions
-━━━━━━━━━━━━━━━━━━━━
-Review important lines individually.
-
-Explain:
-- Why something is inefficient
-- Why a condition can be simplified
-- Why pass-by-reference matters
-- Why a data structure choice is weak/strong
-- Why memory usage can be reduced
-
-━━━━━━━━━━━━━━━━━━━━
-🧪 Edge Cases
-━━━━━━━━━━━━━━━━━━━━
-Mention:
-- Important edge cases
-- Whether the current code handles them
-- Any hidden failing scenarios
-
-━━━━━━━━━━━━━━━━━━━━
-🔄 Alternative Approaches
-━━━━━━━━━━━━━━━━━━━━
-If better approaches exist:
-- Explain brute force
-- Better approach
-- Optimal approach
-
-Compare all approaches.
-
-━━━━━━━━━━━━━━━━━━━━
-📊 Final Evaluation
-━━━━━━━━━━━━━━━━━━━━
-Rate out of 10:
-- Correctness
-- Optimization
-- Readability
-- Interview Quality
-- STL Usage
-- Overall Solution Strength
-
-Be highly technical and specific.
-Avoid generic praise.
-Provide actionable engineering-level feedback.`;
+Provide a single unified, clean, and optimal C++ (or matching language) code block that incorporates all recommended improvements:
+\`\`\`[language]
+// code here
+\`\`\``;
 
       const prompt = `User's Code:
 \`\`\`
@@ -321,32 +217,73 @@ Difficulty: ${currentProblem.difficulty}
 Topics: ${currentProblem.topics.join(', ')}
 URL: ${currentProblem.url}`;
 
+      // Cascading API call strategy to support all project quotas / API versions / regional restrictions
+      const tryCall = async (): Promise<string> => {
+        const models = [
+          'gemini-3.5-flash',
+          'gemini-2.5-flash',
+          'gemini-2.5-pro',
+          'gemini-2.0-flash',
+          'gemini-2.5-flash-lite',
+          'gemini-2.0-flash-lite'
+        ];
+        const versions = ['v1', 'v1beta'];
+        const errors: string[] = [];
+
+        for (const version of versions) {
+          for (const model of models) {
+            try {
+              console.log(`Attempting call with ${model} (${version})...`);
+              return await callGeminiApi(apiKey, prompt, systemPrompt, model, version);
+            } catch (err: any) {
+              const msg = err?.message || String(err);
+              console.warn(`${model} (${version}) failed:`, msg);
+              errors.push(`${model} (${version}): ${msg}`);
+            }
+          }
+        }
+
+        throw new Error(`All Gemini API attempts failed:\n${errors.map(e => `• ${e}`).join('\n')}`);
+      };
+
+      const getSupportedModels = async (): Promise<string[]> => {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+          if (res.ok) {
+            const data = await res.json();
+            return data.models?.map((m: any) => m.name.replace('models/', '')) || [];
+          }
+        } catch {}
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+          if (res.ok) {
+            const data = await res.json();
+            return data.models?.map((m: any) => m.name.replace('models/', '')) || [];
+          }
+        } catch {}
+        return [];
+      };
+
       try {
-        const review = await callGeminiApi(apiKey, prompt, systemPrompt, 'gemini-2.5-flash');
+        const review = await tryCall();
         if (sender.tab && sender.tab.id) {
           chrome.tabs.sendMessage(sender.tab.id, {
             type: 'ANALYZE_CODE_RESPONSE',
             payload: { review }
           });
         }
-      } catch (err) {
-        console.warn('Gemini 2.5 Flash failed, attempting fallback to Gemini 1.5 Flash...', err);
-        try {
-          const review = await callGeminiApi(apiKey, prompt, systemPrompt, 'gemini-1.5-flash');
-          if (sender.tab && sender.tab.id) {
-            chrome.tabs.sendMessage(sender.tab.id, {
-              type: 'ANALYZE_CODE_RESPONSE',
-              payload: { review }
-            });
-          }
-        } catch (fallbackErr) {
-          console.error('LeetCode Companion (Background): Both Gemini models failed:', fallbackErr);
-          if (sender.tab && sender.tab.id) {
-            chrome.tabs.sendMessage(sender.tab.id, {
-              type: 'ANALYZE_CODE_RESPONSE',
-              payload: { error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr) }
-            });
-          }
+      } catch (finalErr) {
+        console.error('LeetCode Companion (Background): All Gemini API models failed:', finalErr);
+        if (sender.tab && sender.tab.id) {
+          const supported = await getSupportedModels();
+          const supportedStr = supported.length > 0
+            ? `\n\nYour API key supports these models:\n${supported.map(m => `• ${m}`).join('\n')}`
+            : '\n\nCould not retrieve supported models list.';
+          
+          chrome.tabs.sendMessage(sender.tab.id, {
+            type: 'ANALYZE_CODE_RESPONSE',
+            payload: { error: (finalErr instanceof Error ? finalErr.message : String(finalErr)) + supportedStr }
+          });
         }
       }
     });

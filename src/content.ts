@@ -43,6 +43,7 @@ const UNIQUE_COMPANIES = ALL_COMPANIES;
 let shadowRoot: ShadowRoot | null = null;
 let sidebarElement: HTMLDivElement | null = null;
 let toggleButton: HTMLDivElement | null = null;
+let modalElement: HTMLDivElement | null = null;
 
 // Initialize Content Script
 function init() {
@@ -162,6 +163,60 @@ function createShadowDom() {
   `;
   toggleButton.addEventListener('click', toggleSidebar);
   shadowRoot.appendChild(toggleButton);
+
+  // Create Code Modal Viewer
+  modalElement = document.createElement('div');
+  modalElement.id = 'lcCodeModal';
+  modalElement.className = 'lc-code-modal';
+  modalElement.innerHTML = `
+    <div class="lc-code-modal-backdrop"></div>
+    <div class="lc-code-modal-content">
+      <div class="lc-code-block-header">
+        <span class="lc-code-block-lang" id="lcCodeModalLang">CPP</span>
+        <div class="lc-code-block-actions">
+          <button class="lc-code-block-copy-btn" id="lcCodeModalCopy">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+          <button class="lc-code-modal-close-btn" id="lcCodeModalClose">Close</button>
+        </div>
+      </div>
+      <pre class="lc-markdown-code-block"><code id="lcCodeModalCode"></code></pre>
+    </div>
+  `;
+  shadowRoot.appendChild(modalElement);
+
+  // Bind modal close buttons
+  const backdrop = modalElement.querySelector('.lc-code-modal-backdrop');
+  const closeBtn = modalElement.querySelector('#lcCodeModalClose');
+  backdrop?.addEventListener('click', closeCodeModal);
+  closeBtn?.addEventListener('click', closeCodeModal);
+
+  // Bind modal copy button
+  const modalCopyBtn = modalElement.querySelector('#lcCodeModalCopy') as HTMLElement | null;
+  modalCopyBtn?.addEventListener('click', () => {
+    const codeEncoded = modalCopyBtn.getAttribute('data-code');
+    if (codeEncoded) {
+      const code = decodeURIComponent(codeEncoded);
+      navigator.clipboard.writeText(code).then(() => {
+        const originalHTML = modalCopyBtn.innerHTML;
+        modalCopyBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Copied!
+        `;
+        modalCopyBtn.style.color = '#22c55e';
+        setTimeout(() => {
+          modalCopyBtn.innerHTML = originalHTML;
+          modalCopyBtn.style.color = '';
+        }, 2000);
+      });
+    }
+  });
 
   applySettings();
 }
@@ -301,9 +356,17 @@ function applySettings() {
   if (resolvedTheme === 'dark') {
     sidebarElement.classList.add('theme-dark');
     sidebarElement.classList.remove('theme-light');
+    if (modalElement) {
+      modalElement.classList.add('theme-dark');
+      modalElement.classList.remove('theme-light');
+    }
   } else {
     sidebarElement.classList.add('theme-light');
     sidebarElement.classList.remove('theme-dark');
+    if (modalElement) {
+      modalElement.classList.add('theme-light');
+      modalElement.classList.remove('theme-dark');
+    }
   }
 }
 
@@ -822,7 +885,7 @@ function renderSidebarContent() {
     }
   }
 
-  // Bind Code Block copy buttons inside AI Review tab
+  // Bind Code Block copy and expand buttons inside AI Review tab
   if (activeTabId === 'ai-review' && sidebarElement) {
     const copyButtons = sidebarElement.querySelectorAll('.lc-code-block-copy-btn');
     copyButtons.forEach(button => {
@@ -846,6 +909,20 @@ function renderSidebarContent() {
               btn.style.color = '';
             }, 2000);
           });
+        }
+      });
+    });
+
+    const expandButtons = sidebarElement.querySelectorAll('.lc-code-block-expand-btn');
+    expandButtons.forEach(button => {
+      const btn = button as HTMLElement;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const codeEncoded = btn.getAttribute('data-code');
+        const lang = btn.getAttribute('data-lang') || 'CODE';
+        if (codeEncoded) {
+          const code = decodeURIComponent(codeEncoded);
+          openCodeModal(code, lang);
         }
       });
     });
@@ -883,22 +960,112 @@ function parseMarkdown(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Code blocks: ```cpp ... ``` with optional language
-  html = html.replace(/```([a-zA-Z0-9+#]*)\r?\n([\s\S]*?)\r?\n```/g, (match, lang, code) => {
+  // ── Extract and render [RATING:Label:X/10] tokens ──
+  const ratingRegex = /\[RATING:([^:]+):(\d+)\/10\]/g;
+  const ratings: { label: string; score: number }[] = [];
+  let ratingMatch;
+  while ((ratingMatch = ratingRegex.exec(html)) !== null) {
+    ratings.push({ label: ratingMatch[1].trim(), score: parseInt(ratingMatch[2], 10) });
+  }
+  // Remove rating tokens from text flow including trailing newlines
+  html = html.replace(/\[RATING:[^\]]+\]\r?\n?/g, '');
+
+  let ratingsHtml = '';
+  if (ratings.length > 0) {
+    const getColor = (score: number): string => {
+      if (score >= 9) return '#22c55e';
+      if (score >= 7) return '#3b82f6';
+      if (score >= 5) return '#f59e0b';
+      if (score >= 3) return '#f97316';
+      return '#ef4444';
+    };
+    const getLabel = (score: number): string => {
+      if (score >= 9) return 'Excellent';
+      if (score >= 7) return 'Good';
+      if (score >= 5) return 'Average';
+      if (score >= 3) return 'Needs Work';
+      return 'Poor';
+    };
+
+    // Separate the Overall rating from dimension ratings
+    const overallIdx = ratings.findIndex(r => r.label.toLowerCase() === 'overall');
+    let overallRating: { label: string; score: number } | null = null;
+    const dimensionRatings = [...ratings];
+    if (overallIdx !== -1) {
+      overallRating = dimensionRatings.splice(overallIdx, 1)[0];
+    }
+
+    let overallHtml = '';
+    if (overallRating) {
+      const oColor = getColor(overallRating.score);
+      const oPercent = overallRating.score * 10;
+      const circumference = 2 * Math.PI * 38;
+      const dashOffset = circumference - (oPercent / 100) * circumference;
+      overallHtml = `
+        <div class="lc-rating-overall">
+          <div class="lc-rating-ring-wrap">
+            <svg viewBox="0 0 84 84" class="lc-rating-ring-svg">
+              <circle cx="42" cy="42" r="38" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/>
+              <circle cx="42" cy="42" r="38" fill="none" stroke="${oColor}" stroke-width="4"
+                stroke-linecap="round" stroke-dasharray="${circumference.toFixed(1)}"
+                stroke-dashoffset="${dashOffset.toFixed(1)}"
+                transform="rotate(-90 42 42)"
+                class="lc-rating-ring-progress"/>
+            </svg>
+            <div class="lc-rating-ring-score" style="color: ${oColor};">${overallRating.score}</div>
+          </div>
+          <div class="lc-rating-overall-text">
+            <span class="lc-rating-overall-label">Overall Score</span>
+            <span class="lc-rating-overall-quality" style="color: ${oColor};">${getLabel(overallRating.score)}</span>
+          </div>
+        </div>`;
+    }
+
+    let dimensionsHtml = dimensionRatings.map(r => {
+      const color = getColor(r.score);
+      const percent = r.score * 10;
+      return `
+        <div class="lc-rating-item">
+          <div class="lc-rating-item-header">
+            <span class="lc-rating-item-label">${r.label}</span>
+            <span class="lc-rating-item-score" style="color: ${color};">${r.score}<span class="lc-rating-item-max">/10</span></span>
+          </div>
+          <div class="lc-rating-bar-track">
+            <div class="lc-rating-bar-fill" style="width: ${percent}%; background: ${color};"></div>
+          </div>
+          <span class="lc-rating-item-quality" style="color: ${color};">${getLabel(r.score)}</span>
+        </div>`;
+    }).join('');
+
+    ratingsHtml = `<div class="lc-ratings-card">${overallHtml}<div class="lc-ratings-grid">${dimensionsHtml}</div></div>`;
+  }
+
+  // Code blocks: ```cpp ... ``` with optional language, allowing unclosed block at end of text
+  html = html.replace(/```([a-zA-Z0-9+#]*)\s*\r?\n([\s\S]*?)(?:\r?\n```|$)/g, (match, lang, code) => {
     const displayLang = lang ? lang.toUpperCase() : 'CODE';
+    const rawCode = decodeEntities(code);
+    const highlighted = highlightCode(rawCode, displayLang);
     return `
       <div class="lc-code-block-container">
         <div class="lc-code-block-header">
           <span class="lc-code-block-lang">${displayLang}</span>
-          <button class="lc-code-block-copy-btn" data-code="${encodeURIComponent(code)}">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            Copy
-          </button>
+          <div class="lc-code-block-actions">
+            <button class="lc-code-block-expand-btn" data-code="${encodeURIComponent(rawCode)}" data-lang="${displayLang}">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+              </svg>
+              Expand
+            </button>
+            <button class="lc-code-block-copy-btn" data-code="${encodeURIComponent(rawCode)}">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </button>
+          </div>
         </div>
-        <pre class="lc-markdown-code-block"><code>${code}</code></pre>
+        <pre class="lc-markdown-code-block"><code>${highlighted}</code></pre>
       </div>
     `;
   });
@@ -932,6 +1099,11 @@ function parseMarkdown(text: string): string {
   }
   html = segments.join('');
 
+  // Inject ratings card at the top of the output
+  if (ratingsHtml) {
+    html = ratingsHtml + html;
+  }
+
   return html;
 }
 
@@ -951,6 +1123,194 @@ function toggleBookmark(slug: string) {
     bookmarks = updatedBookmarks;
     renderSidebarContent();
   });
+}
+
+/**
+ * Escapes HTML entities inside code block parsing.
+ */
+function escapeHTML(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Decodes HTML entities to raw string for tokenization.
+ */
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/**
+ * Custom syntactic highlighting tokenizer.
+ */
+function highlightCode(code: string, lang: string): string {
+  const isPython = ['PYTHON', 'PYTHON3', 'PY', 'RUBY', 'RB'].includes(lang.toUpperCase());
+  
+  // RegEx for tokens:
+  // 1. Whitespace: (\s+)
+  // 2. Single-line comment: (\/\/.*)
+  // 3. Multi-line comment: (\/\*[\s\S]*?\*\/)
+  // 4. Hash-comment/preprocessor: (#.*)
+  // 5. Double-quoted string: ("(?:\\.|[^"\\])*")
+  // 6. Single-quoted string: ('(?:\\.|[^'\\])*')
+  // 7. Numbers: (\b\d+(?:\.\d+)?\b)
+  // 8. Identifiers: (\b[a-zA-Z_]\w*\b)
+  // 9. Symbols: ([^\w\s]+)
+  const tokenRegex = /(\s+)|(\/\/.*)|(\/\*[\s\S]*?\*\/)|(#.*)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(\b\d+(?:\.\d+)?\b)|(\b[a-zA-Z_]\w*\b)|([^\w\s]+)/g;
+  
+  const keywords = new Set([
+    'class', 'struct', 'public', 'private', 'protected', 'int', 'float', 'double', 'char', 'bool', 'void', 'vector', 'string', 'unordered_map', 'unordered_set', 'map', 'set', 'pair', 'auto', 'const', 'while', 'if', 'else', 'for', 'return', 'true', 'false', 'namespace', 'using', 'template', 'typename', 'static', 'virtual', 'override', 'new', 'delete', 'null', 'nullptr', 'nil', 'def', 'self', 'import', 'from', 'as', 'in', 'and', 'or', 'not', 'is', 'lambda', 'elif', 'try', 'except', 'finally', 'raise', 'with', 'pass', 'break', 'continue', 'let', 'function', 'var', 'interface', 'type', 'package', 'func', 'fn', 'impl', 'use', 'pub', 'mut', 'async', 'await', 'extern'
+  ]);
+
+  interface Token {
+    text: string;
+    type: 'whitespace' | 'comment' | 'string' | 'number' | 'identifier' | 'symbol';
+  }
+
+  const tokens: Token[] = [];
+  let match;
+  
+  tokenRegex.lastIndex = 0;
+  while ((match = tokenRegex.exec(code)) !== null) {
+    const [
+      full,
+      whitespace,
+      slComment,
+      mlComment,
+      hashComment,
+      dqString,
+      sqString,
+      number,
+      identifier,
+      symbol
+    ] = match;
+
+    if (whitespace !== undefined) {
+      tokens.push({ text: whitespace, type: 'whitespace' });
+    } else if (slComment !== undefined) {
+      tokens.push({ text: slComment, type: 'comment' });
+    } else if (mlComment !== undefined) {
+      tokens.push({ text: mlComment, type: 'comment' });
+    } else if (hashComment !== undefined) {
+      if (isPython) {
+        tokens.push({ text: hashComment, type: 'comment' });
+      } else {
+        if (hashComment.startsWith('#')) {
+          tokens.push({ text: hashComment, type: 'identifier' });
+        } else {
+          tokens.push({ text: hashComment, type: 'symbol' });
+        }
+      }
+    } else if (dqString !== undefined) {
+      tokens.push({ text: dqString, type: 'string' });
+    } else if (sqString !== undefined) {
+      tokens.push({ text: sqString, type: 'string' });
+    } else if (number !== undefined) {
+      tokens.push({ text: number, type: 'number' });
+    } else if (identifier !== undefined) {
+      tokens.push({ text: identifier, type: 'identifier' });
+    } else if (symbol !== undefined) {
+      tokens.push({ text: symbol, type: 'symbol' });
+    }
+  }
+
+  function getVariableColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return `code-var-${Math.abs(hash) % 8}`;
+  }
+
+  let resultHtml = '';
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    
+    if (token.type === 'whitespace') {
+      resultHtml += token.text;
+    } else if (token.type === 'comment') {
+      resultHtml += `<span class="code-comment">${escapeHTML(token.text)}</span>`;
+    } else if (token.type === 'string') {
+      resultHtml += `<span class="code-string">${escapeHTML(token.text)}</span>`;
+    } else if (token.type === 'number') {
+      resultHtml += `<span class="code-number">${escapeHTML(token.text)}</span>`;
+    } else if (token.type === 'identifier') {
+      const text = token.text;
+      const lowerText = text.toLowerCase();
+      if (text.startsWith('#')) {
+        resultHtml += `<span class="code-keyword">${escapeHTML(text)}</span>`;
+      } else if (keywords.has(text) || keywords.has(lowerText)) {
+        resultHtml += `<span class="code-keyword">${escapeHTML(text)}</span>`;
+      } else {
+        let isFunc = false;
+        for (let j = i + 1; j < tokens.length; j++) {
+          if (tokens[j].type === 'whitespace') continue;
+          if (tokens[j].type === 'symbol' && tokens[j].text.startsWith('(')) {
+            isFunc = true;
+          }
+          break;
+        }
+
+        if (isFunc) {
+          resultHtml += `<span class="code-function">${escapeHTML(text)}</span>`;
+        } else {
+          resultHtml += `<span class="${getVariableColor(text)}">${escapeHTML(text)}</span>`;
+        }
+      }
+    } else if (token.type === 'symbol') {
+      resultHtml += escapeHTML(token.text);
+    }
+  }
+
+  return resultHtml;
+}
+
+/**
+ * Open code modal window.
+ */
+function openCodeModal(code: string, lang: string) {
+  if (!shadowRoot) return;
+  const rootContainer = document.getElementById('leetcode-companion-root');
+  if (rootContainer) {
+    rootContainer.style.width = '100vw';
+    rootContainer.style.height = '100vh';
+  }
+
+  const modal = shadowRoot.getElementById('lcCodeModal');
+  const modalLang = shadowRoot.getElementById('lcCodeModalLang');
+  const modalCode = shadowRoot.getElementById('lcCodeModalCode');
+  const modalCopy = shadowRoot.getElementById('lcCodeModalCopy') as HTMLElement | null;
+
+  if (modal && modalLang && modalCode) {
+    modalLang.textContent = lang.toUpperCase();
+    modalCode.innerHTML = highlightCode(code, lang);
+    if (modalCopy) {
+      modalCopy.setAttribute('data-code', encodeURIComponent(code));
+    }
+    modal.classList.add('active');
+  }
+}
+
+/**
+ * Close code modal window.
+ */
+function closeCodeModal() {
+  if (!shadowRoot) return;
+  const modal = shadowRoot.getElementById('lcCodeModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+
+  const rootContainer = document.getElementById('leetcode-companion-root');
+  if (rootContainer) {
+    rootContainer.style.width = '0';
+    rootContainer.style.height = '0';
+  }
 }
 
 // Start core execution

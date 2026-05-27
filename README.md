@@ -14,9 +14,17 @@ It features a dynamically compiled database of **1,446 high-frequency interview 
 
 ### 🔮 Frosted-Glass Sidebar UI
 * **Isolated Shadow DOM**: Injected via a secure Shadow Root to guarantee zero stylesheet leakage or conflicts with LeetCode's native styles.
-* **Glassmorphism Theme**: Translucent frosted panels with high-blur backdrops (`backdrop-filter: blur(28px)`), subtle borders, and smooth transitions.
-* **Vibrant Gradient Headers**: Stylized triple-gradient headers (`#818cf8` Indigo ➔ `#c084fc` Purple ➔ `#f472b6` Pink).
+* **Glassmorphism Theme**: Translucent frosted panels with high-blur backdrops (`backdrop-filter: blur(32px)`), subtle borders, and smooth transitions.
+* **Vibrant Gradient Headers**: Stylized triple-gradient headers (`#818cf8` Indigo ➔ `#c084fc` Purple ➔ `#f472b6` Pink) with keyframe title shimmers.
 * **Responsive Light & Dark Themes**: Fully automatic theme detection matching LeetCode's UI theme, plus explicit options override.
+
+### 🤖 AI Code Review & Scoring Dashboard
+* **Monaco/CodeMirror Scraper**: One-click extraction of your C++/Python/Java code directly from LeetCode's native text editor.
+* **Circular Overall Score Dial**: Dynamically renders an animated radial SVG ring scoring your solution from 1 to 10.
+* **Dimension Rating Progress Bars**: Evaluation cards for 5 core dimensions: *Readability, Code Style, Naming, Efficiency, and Edge Cases*.
+* **Interactive Code Modal**: Clicking **Expand** opens a full-screen glassmorphic editor modal with separate scroll tracking.
+* **Hashed Semantic Highlight**: Tokenizes code with custom Monokai Pro (Dark) and GitHub Light theme colors. Uniquely hashes variable identifiers to 8 distinct pastel classes to trace data flow.
+* **Cascading Model Router**: Exceeds rate limits and version blocks by automatically cascading through `gemini-3.5-flash`, `gemini-2.5-flash`, `gemini-2.5-pro`, and `gemini-2.0-flash` on `v1` and `v1beta`.
 
 ### 📊 Real-world Company Analytics
 * **Interactive Autocomplete**: Search across 197 companies directly in the sidebar or popup with instant matching.
@@ -43,12 +51,14 @@ The following diagram illustrates how the LeetCode Companion Extension modules i
 graph TD
     A[LeetCode SPA Problem Page] -->|URL Observer| B(Content Script - content.ts)
     B -->|Mounts Shadow DOM Container| C[Frosted Glass Sidebar UI]
-    B -->|Send PROBLEM_DETECTED message| D(Background Service Worker - background.ts)
+    B -->|Send PROBLEM_DETECTED / ANALYZE_CODE message| D(Background Service Worker - background.ts)
     D -->|Queries Database| E[(Problem Database - problemDatabase.ts)]
+    D -->|Queries Gemini API| H[Google Gemini API]
     E -->|1446 Questions / 197 Companies| D
-    D -->|Send DATA_RESPONSE| B
-    B -->|Renders UI State| C
-    F[Extension Popup - popup.html] -->|Updates Settings| G[(chrome.storage.local)]
+    H -->|Code Review & Ratings JSON| D
+    D -->|Send DATA_RESPONSE / ANALYZE_CODE_RESPONSE| B
+    B -->|Renders UI State & Score Cards| C
+    F[Extension Popup - popup.html] -->|Updates Settings & API Key| G[(chrome.storage.local)]
     B -->|Synchronizes Settings| G
 ```
 
@@ -109,11 +119,20 @@ This compiles the TypeScript files and bundles popup, content, and background sc
 1. Navigate to any LeetCode problem (e.g., [Two Sum](https://leetcode.com/problems/two-sum/)).
 2. Look for the glowing circular button on the bottom right/left of the page.
 3. Click the button (or press `Alt + L`) to slide open the frosted glass panel.
-4. **Tabs**:
+4. **Configure Gemini API Key**:
+   * Get a free Gemini API Key from [Google AI Studio](https://aistudio.google.com/).
+   * Click the **LeetCode Companion** extension icon in your Chrome toolbar.
+   * Paste your key into the **Gemini API Key** field and save.
+5. **AI Code Review**:
+   * Write your solution in LeetCode's editor.
+   * Switch to the **AI Review** tab in the sidebar.
+   * Click **📥 Scrape Editor Code** to automatically capture your code.
+   * Click **🚀 Run AI Analysis** to get standard-aligned FAANG feedback.
+6. **Tabs**:
    * **Similar**: Check related problems, matching percentages, and algorithmic rationales.
    * **Companies**: Click company entries to inspect their top-asked questions. Type any company name into the search bar to filter questions asked by specific companies.
    * **Patterns**: View next step recommendations, paired frequency questions, and contest history.
-5. **Popup Options**: Click the extension icon in your Chrome toolbar to swap alignment (Left/Right) or manage your bookmarked questions list.
+7. **Popup Options**: Click the extension icon in your Chrome toolbar to swap alignment (Left/Right) or manage your bookmarked questions list.
 
 ---
 
