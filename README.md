@@ -1,102 +1,134 @@
-# LeetCode Companion Chrome Extension
+# 🚀 LeetCode Companion Chrome Extension
 
-An intelligent, high-aesthetic interview companion for LeetCode. It injects a responsive, glassmorphic sidebar directly into LeetCode problems pages to display similar problems, detailed company frequency metrics, algorithmic patterns, recommendations, and contest history.
+[![Manifest V3](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-818cf8?style=for-the-badge&logo=google-chrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.4-646cff?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 
-It features a dynamically compiled database of **1,446 high-frequency interview questions** asked across **197 companies**, with full autocomplete search support in both the popup and the in-page sidebar.
+An intelligent, high-aesthetic interview companion for LeetCode. It injects a responsive, **glassmorphic frosted-glass sidebar** directly into LeetCode problem pages to display similar questions, detailed company frequency metrics, algorithmic patterns, recommendations, and contest history.
 
----
-
-## Key Features
-
-* **Glassmorphic UI & Styling**: Premium, dark-themed responsive sidebar injected via isolated Shadow DOM to avoid styling clashes with LeetCode.
-* **Dynamic Autocomplete Search**: Interactive search input inside both the sidebar and the options popup with keyboard arrow navigation to search through 197 companies.
-* **Comprehensive Company Insights**: Displays deterministic mock company frequencies, interview stages (Online Assessment, Onsite, Technical), and recency metrics.
-* **Similar Problems Matcher**: Heuristic match scoring based on topic overlap, difficulty progression, and common company interview pairings.
-* **Next progressive step predictions**: Dynamic recommendations of which problem to solve next to consolidate your knowledge or step up the difficulty ladder.
-* **Saved Bookmarks**: Easily star/bookmark any problem and access it directly from the Chrome extension popup.
+It features a dynamically compiled database of **1,446 high-frequency interview questions** asked across **197 top-tier tech companies** (extracted from real-world datasets), complete with keyboard-navigable autocomplete search dropdowns.
 
 ---
 
-## Technical Stack
+## ✨ Features Spotlight
 
-* **Core**: HTML5, TypeScript, Vanilla CSS
-* **Build System**: Vite, Rollup, programmatic build script (sequential packing of content, background, and popup modules to prevent code-splitting and runtime import issues)
-* **API Level**: Chrome Extension Manifest V3
+### 🔮 Frosted-Glass Sidebar UI
+* **Isolated Shadow DOM**: Injected via a secure Shadow Root to guarantee zero stylesheet leakage or conflicts with LeetCode's native styles.
+* **Glassmorphism Theme**: Translucent frosted panels with high-blur backdrops (`backdrop-filter: blur(28px)`), subtle borders, and smooth transitions.
+* **Vibrant Gradient Headers**: Stylized triple-gradient headers (`#818cf8` Indigo ➔ `#c084fc` Purple ➔ `#f472b6` Pink).
+* **Responsive Light & Dark Themes**: Fully automatic theme detection matching LeetCode's UI theme, plus explicit options override.
+
+### 📊 Real-world Company Analytics
+* **Interactive Autocomplete**: Search across 197 companies directly in the sidebar or popup with instant matching.
+* **Frequency & Recency Metrics**: Transparent color-bar frequency graphs representing how often Meta, Google, Stripe, or Netflix ask each question.
+* **Recency Badging**: Identifies if a question was asked within 0-3 months, 3-6 months, or 6-12+ months.
+
+### 🧠 Intricate Recommendations
+* **Matching Heuristic**: Scores similar problems using a custom overlap algorithm (pattern resemblance, difficulty delta, and shared tags).
+* **Difficulty Pills**: Glowing difficulty badges (Easy, Medium, Hard) colored using vivid HSL palettes.
+* **Curated List Identifiers**: Soft badges identifying questions from **Blind 75**, **Neetcode 150**, and **Grind 75**.
+* **Solve-Next Engine**: Suggests the optimal progressive step (e.g., matching a related pattern with a slight difficulty curve).
+
+### 🔖 Options & Bookmarking
+* **Custom Module Toggle**: Toggle widgets (Similar problems, Predictions, Company Insights, Contest history) on/off.
+* **Problem Stars**: Star problems instantly from the sidebar and manage them inside the Chrome Extension Popup dropdown.
 
 ---
 
-## File Structure
+## 🛠️ Architecture
+
+The following diagram illustrates how the LeetCode Companion Extension modules interact:
+
+```mermaid
+graph TD
+    A[LeetCode SPA Problem Page] -->|URL Observer| B(Content Script - content.ts)
+    B -->|Mounts Shadow DOM Container| C[Frosted Glass Sidebar UI]
+    B -->|Send PROBLEM_DETECTED message| D(Background Service Worker - background.ts)
+    D -->|Queries Database| E[(Problem Database - problemDatabase.ts)]
+    E -->|1446 Questions / 197 Companies| D
+    D -->|Send DATA_RESPONSE| B
+    B -->|Renders UI State| C
+    F[Extension Popup - popup.html] -->|Updates Settings| G[(chrome.storage.local)]
+    B -->|Synchronizes Settings| G
+```
+
+---
+
+## 📂 File Directory
 
 ```
 leetcode-companion/
-├── public/
-│   ├── manifest.json       # Chrome Extension Manifest V3
-│   ├── content.css         # Sidebar injected styling (glassmorphism)
-│   └── icons/              # Programmatically generated PNG icons
-├── src/
-│   ├── types.ts            # Core TypeScript schemas
-│   ├── background.ts       # Background service worker (processing requests)
-│   ├── content.ts          # Content script injected into leetcode.com/problems/*
-│   ├── popup.ts            # Extension settings panel logic
+├── dist/                   # Packaged production extension files
+├── public/                 # Static Assets
+│   ├── manifest.json       # Extension configuration (Manifest V3)
+│   ├── content.css         # Sidebar UI Stylesheet
+│   └── icons/              # Programmatically generated icons (16, 48, 128)
+├── src/                    # Source Directory
+│   ├── types.ts            # Core TypeScript schemas & definitions
+│   ├── background.ts       # Background service worker & database lookup
+│   ├── content.ts          # Shadow DOM mounting, scraping, and tab controller
+│   ├── popup.ts            # Options panel & bookmarks dashboard controller
 │   └── data/
-│       └── problemDatabase.ts # Packaged database (1446 questions, 197 companies)
+│       └── problemDatabase.ts # Aggregated question database
 ├── scripts/
-│   ├── build-db.py         # Dynamic CSV compiler
-│   ├── build.js            # Sequential Vite bundler
-│   └── generate-icons.py   # Programmatic icon generator using Pillow
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+│   ├── build.js            # Sequential compiler script (prevents vite splitting)
+│   ├── build-db.py         # CSV crawler & database compiler script
+│   └── generate-icons.py   # Icon maker using Pillow
+├── package.json            # npm metadata & dependencies
+├── tsconfig.json           # TypeScript configuration
+└── vite.config.ts          # Vite bundler configurations
 ```
 
 ---
 
-## Installation & Setup
+## 🚀 Installation & Setup
 
 ### 1. Build the Extension
-Ensure you have [Node.js](https://nodejs.org/) installed, then run:
+Ensure you have [Node.js](https://nodejs.org/) installed, then run the commands below:
+
 ```bash
-# Install development dependencies
+# Install dependencies
 npm install
 
 # Compile TypeScript and bundle scripts
 npm run build
 ```
-This output compiles all scripts and copies static assets into the `dist/` folder.
+This compiles the TypeScript files and bundles popup, content, and background scripts sequentially into the `/dist` directory.
 
-### 2. Load the Extension in Google Chrome
-1. Open Google Chrome and navigate to `chrome://extensions/`.
-2. Enable **Developer mode** in the top-right corner.
+### 2. Load the Unpacked Extension in Chrome
+1. Open **Google Chrome** and navigate to `chrome://extensions/`.
+2. Toggle **Developer mode** in the top-right corner.
 3. Click **Load unpacked** in the top-left corner.
-4. Select the **`dist`** directory inside the project folder:
+4. Select the **`dist/`** folder inside the project directory:
    `leetcode-companion/dist`
 
 ---
 
-## How to use LeetCode Companion
+## 💡 How to Use
 
-1. Open any LeetCode problem page, e.g., [Two Sum](https://leetcode.com/problems/two-sum/).
-2. You will see a glowing purple circular floating button in the bottom right corner.
-3. Click the button (or press `Alt + L`) to slide in the companion drawer.
-4. Navigate tabs:
-   * **Similar**: Check related problems with matching scores and explanations.
-   * **Companies**: Review company metrics. Type any company name (e.g. *Citadel*, *Google*, *Stripe*) in the search input to see all questions for that company in the database.
-   * **Patterns**: View next progressive step recommendations, frequently paired questions, and Weekly Contest history.
-5. Click the extension icon in your Chrome toolbar to configure sidebar alignment (Left/Right) or browse bookmarks.
+1. Navigate to any LeetCode problem (e.g., [Two Sum](https://leetcode.com/problems/two-sum/)).
+2. Look for the glowing circular button on the bottom right/left of the page.
+3. Click the button (or press `Alt + L`) to slide open the frosted glass panel.
+4. **Tabs**:
+   * **Similar**: Check related problems, matching percentages, and algorithmic rationales.
+   * **Companies**: Click company entries to inspect their top-asked questions. Type any company name into the search bar to filter questions asked by specific companies.
+   * **Patterns**: View next step recommendations, paired frequency questions, and contest history.
+5. **Popup Options**: Click the extension icon in your Chrome toolbar to swap alignment (Left/Right) or manage your bookmarked questions list.
 
 ---
 
-## Re-compiling the Database from Scratch
-If you wish to re-aggregate the raw CSV files or update question frequencies:
-1. Clone the reference company questions repository:
+## ⚙️ Compiling the Database
+
+The database is pre-compiled. However, if you wish to re-compile it or incorporate fresh CSV data:
+1. Clone the reference repository:
    ```bash
    git clone https://github.com/krishnadey30/LeetCode-Questions-CompanyWise.git
    ```
-2. Re-compile the `problemDatabase.ts`:
+2. Run the compiler script:
    ```bash
    python scripts/build-db.py --csv-dir ./LeetCode-Questions-CompanyWise --out src/data/problemDatabase.ts
    ```
-3. Re-build the extension:
+3. Rebuild:
    ```bash
    npm run build
    ```
