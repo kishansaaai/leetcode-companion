@@ -404,7 +404,7 @@ function renderSidebarContent() {
           .sort((a, b) => (b.frequency || 0) - (a.frequency || 0));
 
         htmlContent += `
-          <button class="lc-company-back-btn" style="background: none; border: none; font-size: 11px; cursor: pointer; display: flex; align-items: center; padding: 4px 0; margin-bottom: 12px; font-weight: 600; color: #6366f1; gap: 4px; font-family: inherit;">
+          <button class="lc-company-back-btn">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
@@ -454,7 +454,7 @@ function renderSidebarContent() {
           companyInsights.forEach(insight => {
             const pct = maxFreq > 0 ? (insight.frequency / maxFreq) * 100 : 0;
             htmlContent += `
-              <div class="lc-company-row lc-company-row-clickable" data-company="${insight.company}" style="cursor: pointer; padding: 6px; border-radius: 8px; transition: background 0.2s;">
+              <div class="lc-company-row lc-company-row-clickable" data-company="${insight.company}">
                 <div class="lc-company-info">
                   <span class="lc-company-name">${insight.company}</span>
                   <span class="lc-company-count">${insight.frequency} times</span>
