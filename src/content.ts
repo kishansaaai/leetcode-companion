@@ -31,6 +31,10 @@ let bookmarks: string[] = [];
 let activeTabId = 'similar-problems';
 let isSidebarOpen = false;
 let selectedCompanyFilter: string | null = null;
+let lastScrapedCode = '';
+let lastAnalysisResult = '';
+let isAnalyzingCode = false;
+let analysisError = '';
 
 // Use the complete list of 100+ companies
 const UNIQUE_COMPANIES = ALL_COMPANIES;
@@ -333,6 +337,7 @@ function renderSidebarContent() {
       <button class="lc-tab-link ${activeTabId === 'similar-problems' ? 'active' : ''}" data-tab="similar-problems">Similar</button>
       <button class="lc-tab-link ${activeTabId === 'companies' ? 'active' : ''}" data-tab="companies">Companies</button>
       <button class="lc-tab-link ${activeTabId === 'patterns' ? 'active' : ''}" data-tab="patterns">Patterns</button>
+      <button class="lc-tab-link ${activeTabId === 'ai-review' ? 'active' : ''}" data-tab="ai-review">AI Review</button>
     </div>
 
     <div class="lc-scrollable-content">
@@ -540,6 +545,44 @@ function renderSidebarContent() {
     htmlContent += `</div>`;
   }
 
+  // --- TAB 4: AI REVIEW ---
+  if (activeTabId === 'ai-review') {
+    htmlContent += `<div class="lc-tab-panel active">`;
+    
+    const apiKey = settings.geminiApiKey;
+    if (!apiKey) {
+      htmlContent += `
+        <div class="lc-section-header">AI Code Review & Optimizer</div>
+        <div class="lc-empty-state" style="border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.02); color: #f43f5e; opacity: 1; padding: 16px; font-weight: 500; text-align: left; line-height: 1.4;">
+          ⚠️ <strong>API Key Missing</strong><br><br>
+          Please configure your Gemini API Key in the extension settings popup (click the LeetCode Companion icon in your toolbar) to enable the AI Reviewer.
+        </div>
+      `;
+    } else {
+      htmlContent += `
+        <div class="lc-section-header">AI Code Review & Optimizer</div>
+        <div class="lc-review-container">
+          <div style="font-size: 11px; opacity: 0.6; margin-bottom: 8px;">Submit your code below or auto-extract it directly from your LeetCode code editor window.</div>
+          
+          <div class="lc-review-action-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button class="lc-review-action-btn scrape" style="flex: 1;">
+              📥 Scrape Editor Code
+            </button>
+            <button class="lc-review-action-btn analyze" style="flex: 1; background: #6366f1; color: white;">
+              🚀 Run AI Analysis
+            </button>
+          </div>
+
+          <textarea class="lc-review-textarea" placeholder="Paste your solution code here (or click Scrape Editor Code)..." spellcheck="false">${lastScrapedCode}</textarea>
+          
+          <div class="lc-review-output" style="margin-top: 16px;"></div>
+        </div>
+      `;
+    }
+
+    htmlContent += `</div>`;
+  }
+
   htmlContent += `
     </div> <!-- scrollable content -->
   `;
@@ -681,6 +724,156 @@ function renderSidebarContent() {
       document.addEventListener('click', closeSuggestionsHandler);
     });
   }
+
+  // Bind AI Review UI actions
+  if (activeTabId === 'ai-review') {
+    const textarea = sidebarElement.querySelector('.lc-review-textarea') as HTMLTextAreaElement | null;
+    const outputDiv = sidebarElement.querySelector('.lc-review-output') as HTMLDivElement | null;
+    const scrapeBtn = sidebarElement.querySelector('.lc-review-action-btn.scrape');
+    const analyzeBtn = sidebarElement.querySelector('.lc-review-action-btn.analyze');
+
+    if (textarea) {
+      textarea.addEventListener('input', () => {
+        lastScrapedCode = textarea.value;
+      });
+    }
+
+    if (outputDiv) {
+      if (isAnalyzingCode) {
+        outputDiv.innerHTML = `
+          <div class="lc-loading-container" style="padding: 24px 0;">
+            <div class="lc-spinner"></div>
+            <div class="lc-loading-text" style="font-weight: 600; background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Analyzing code... Acting as FAANG interviewer</div>
+          </div>
+        `;
+      } else if (analysisError) {
+        outputDiv.innerHTML = `
+          <div class="lc-empty-state" style="border-color: rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.05); color: #f43f5e; opacity: 1; text-align: left; padding: 14px;">
+            ❌ <strong>Error:</strong> ${analysisError}
+          </div>
+        `;
+      } else if (lastAnalysisResult) {
+        outputDiv.innerHTML = `
+          <div class="lc-markdown-output">
+            ${parseMarkdown(lastAnalysisResult)}
+          </div>
+        `;
+      }
+    }
+
+    if (scrapeBtn && textarea) {
+      scrapeBtn.addEventListener('click', () => {
+        const code = scrapeCodeFromPage();
+        if (code) {
+          lastScrapedCode = code;
+          textarea.value = code;
+        } else {
+          alert('Failed to automatically locate LeetCode editor code. Please paste your code manually.');
+        }
+      });
+    }
+
+    if (analyzeBtn && textarea) {
+      analyzeBtn.addEventListener('click', () => {
+        const code = textarea.value.trim();
+        if (!code) {
+          alert('Please enter or scrape your code first.');
+          return;
+        }
+
+        isAnalyzingCode = true;
+        analysisError = '';
+        lastAnalysisResult = '';
+        renderSidebarContent(); // re-render to show loading state
+
+        chrome.runtime.sendMessage({
+          type: 'ANALYZE_CODE',
+          payload: {
+            code,
+            currentProblem
+          }
+        }, (response) => {
+          isAnalyzingCode = false;
+          if (response?.error) {
+            analysisError = response.error;
+          } else if (response?.review) {
+            lastAnalysisResult = response.review;
+          } else {
+            analysisError = 'Unknown response payload received.';
+          }
+          renderSidebarContent(); // re-render to display result
+        });
+      });
+    }
+  }
+}
+
+/**
+ * Scrapes the code from Monaco Editor (.view-line) or CodeMirror (.CodeMirror-code).
+ */
+function scrapeCodeFromPage(): string {
+  // Query all line elements inside Monaco editor
+  const viewLines = document.querySelectorAll('.view-line');
+  if (viewLines.length > 0) {
+    return Array.from(viewLines).map(line => line.textContent || '').join('\n');
+  }
+
+  // Fallback for CodeMirror
+  const codeMirror = document.querySelector('.CodeMirror-code');
+  if (codeMirror) {
+    return codeMirror.textContent || '';
+  }
+
+  return '';
+}
+
+/**
+ * A lightweight markdown parser to convert headers, list items, bold texts, and code blocks into HTML.
+ */
+function parseMarkdown(text: string): string {
+  if (!text) return '';
+
+  // Escapes HTML entities
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Code blocks: ```cpp ... ```
+  html = html.replace(/```(?:[a-zA-Z0-9+#]+)?\n([\s\S]*?)\n```/g, (match, code) => {
+    return `<pre class="lc-markdown-code-block"><code>${code}</code></pre>`;
+  });
+
+  // Inline code: `code`
+  html = html.replace(/`([^`]+)`/g, '<code class="lc-markdown-inline-code">$1</code>');
+
+  // Headers: ###, ##, #
+  html = html.replace(/^### (.*$)/gim, '<h3 class="lc-markdown-h3">$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2 class="lc-markdown-h2">$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1 class="lc-markdown-h1">$1</h1>');
+
+  // Headers: bold text mapping
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  // Replace Markdown divider lines
+  html = html.replace(/^(?:---|━━━*)$/gm, '<hr class="lc-markdown-hr">');
+
+  // Bullet points
+  html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="lc-markdown-li">$1</li>');
+
+  // Wrap loose list items in a single ul list
+  html = html.replace(/((?:<li class="lc-markdown-li">[\s\S]*?<\/li>\s*)+)/g, '<ul class="lc-markdown-ul">$1</ul>');
+
+  // Line breaks for general text, preserving HTML tags
+  const segments = html.split(/(<pre[\s\S]*?<\/pre>)/);
+  for (let i = 0; i < segments.length; i++) {
+    if (!segments[i].startsWith('<pre')) {
+      segments[i] = segments[i].replace(/\n/g, '<br>');
+    }
+  }
+  html = segments.join('');
+
+  return html;
 }
 
 /**

@@ -18,6 +18,8 @@ const bookmarksListContainer = document.getElementById('bookmarksList') as HTMLD
 const companySearchInput = document.getElementById('companySearchInput') as HTMLInputElement;
 const companySuggestionsContainer = document.getElementById('companySuggestions') as HTMLDivElement;
 const companyProblemsListContainer = document.getElementById('companyProblemsList') as HTMLDivElement;
+const geminiApiKeyInput = document.getElementById('geminiApiKey') as HTMLInputElement;
+const toggleApiKeyVisibilityBtn = document.getElementById('toggleApiKeyVisibility') as HTMLButtonElement;
 
 // Use the complete list of 100+ companies
 const UNIQUE_COMPANIES = ALL_COMPANIES;
@@ -46,7 +48,8 @@ function init() {
     { el: showCompanyInsightsInput, key: 'showCompanyInsights', type: 'checkbox' },
     { el: showPredictionsInput, key: 'showPredictions', type: 'checkbox' },
     { el: showPairFrequencyInput, key: 'showPairFrequency', type: 'checkbox' },
-    { el: showContestHistoryInput, key: 'showContestHistory', type: 'checkbox' }
+    { el: showContestHistoryInput, key: 'showContestHistory', type: 'checkbox' },
+    { el: geminiApiKeyInput, key: 'geminiApiKey', type: 'text' }
   ];
 
   inputs.forEach(({ el, key, type }) => {
@@ -72,6 +75,15 @@ function init() {
       });
     });
   });
+
+  // Bind API Key visibility toggle
+  if (toggleApiKeyVisibilityBtn && geminiApiKeyInput) {
+    toggleApiKeyVisibilityBtn.addEventListener('click', () => {
+      const type = geminiApiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      geminiApiKeyInput.setAttribute('type', type);
+      toggleApiKeyVisibilityBtn.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+  }
 
   // Bind company search autocomplete listener
   let activeSuggestionIndex = -1;
@@ -190,6 +202,7 @@ function populateSettingsUI() {
   if (showPredictionsInput) showPredictionsInput.checked = settings.showPredictions;
   if (showPairFrequencyInput) showPairFrequencyInput.checked = settings.showPairFrequency;
   if (showContestHistoryInput) showContestHistoryInput.checked = settings.showContestHistory;
+  if (geminiApiKeyInput) geminiApiKeyInput.value = settings.geminiApiKey || '';
 }
 
 /**

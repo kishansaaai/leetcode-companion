@@ -308,7 +308,7 @@
       margin-top: 6px;
       margin-bottom: 8px;
     }
-    .company-search-input {
+    .company-search-input, .lc-input {
       width: 100%;
       box-sizing: border-box;
       background-color: rgba(30, 41, 59, 0.6);
@@ -321,18 +321,21 @@
       font-family: inherit;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .company-search-input:focus {
+    .company-search-input:focus, .lc-input:focus {
       border-color: #6366f1;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
-    body.theme-light .company-search-input {
+    body.theme-light .company-search-input, body.theme-light .lc-input {
       background-color: #ffffff;
       border-color: rgba(0, 0, 0, 0.15);
       color: #0f172a;
     }
-    body.theme-light .company-search-input:focus {
+    body.theme-light .company-search-input:focus, body.theme-light .lc-input:focus {
       border-color: #4f46e5;
       box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    }
+    body.theme-light .lc-api-key-container {
+      border-top-color: rgba(0, 0, 0, 0.08) !important;
     }
     .company-suggestions {
       display: none;
@@ -521,6 +524,15 @@
         <input type="checkbox" id="showContestHistory">
         <span>Show Contest History</span>
       </label>
+    </div>
+
+    <div class="control-group lc-api-key-container" style="flex-direction: column; align-items: stretch; gap: 6px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+      <span style="font-size: 13px; font-weight: 500;">Gemini API Key</span>
+      <div style="display: flex; gap: 8px; position: relative;">
+        <input type="password" id="geminiApiKey" placeholder="AI Review API Key..." class="lc-input" style="padding-right: 32px;" />
+        <button id="toggleApiKeyVisibility" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); outline: none; padding: 0;">👁️</button>
+      </div>
+      <div style="font-size: 9px; opacity: 0.5; margin-top: 2px;">Used to analyze solutions & suggest optimizations in the Code Review tab. Get one at <a href="https://aistudio.google.com/" target="_blank" style="color: #6366f1;">Google AI Studio</a>.</div>
     </div>
   </div>
 

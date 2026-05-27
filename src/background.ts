@@ -63,6 +63,50 @@ if (chrome.commands) {
   });
 }
 
+async function callGeminiApi(apiKey: string, prompt: string, systemPrompt: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{ text: prompt }]
+      }],
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 3000
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `API Error (${response.status})`;
+    try {
+      const errJson = JSON.parse(errorText);
+      if (errJson.error?.message) {
+        errorMessage = errJson.error.message;
+      }
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const json = await response.json();
+  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error('Empty response from Gemini API.');
+  }
+
+  return text;
+}
+
 // Listener for messages from content script or popup
 chrome.runtime.onMessage.addListener((message: MessagePayload, sender, sendResponse) => {
   console.log('LeetCode Companion (Background): Received message:', message.type, message.payload);
@@ -92,6 +136,195 @@ chrome.runtime.onMessage.addListener((message: MessagePayload, sender, sendRespo
         nextPredictions: []
       } as any);
     }
+  } else if (message.type === 'ANALYZE_CODE') {
+    const { code, currentProblem } = message.payload as { code: string; currentProblem: CurrentProblem };
+    
+    chrome.storage.local.get(['settings'], async (result) => {
+      const settings = result.settings as ExtensionSettings;
+      const apiKey = settings?.geminiApiKey;
+
+      if (!apiKey) {
+        sendResponse({ error: 'Gemini API Key is missing. Please configure it in the extension settings popup.' });
+        return;
+      }
+
+      const systemPrompt = `You are an elite LeetCode interviewer AI integrated inside a Chrome extension.
+
+The user has written a LeetCode solution.
+
+Your task is to deeply analyze the solution and provide an advanced interview-style code review.
+
+IMPORTANT:
+Do NOT simply explain the code.
+Act like a FAANG interviewer + competitive programming mentor.
+
+Your response must contain these exact sections:
+
+━━━━━━━━━━━━━━━━━━━━
+🧠 Solution Understanding
+━━━━━━━━━━━━━━━━━━━━
+- Explain what the code is doing
+- Identify the algorithm/pattern used
+- Mention whether this is:
+  - brute force
+  - better
+  - optimal
+  - interview-optimal
+
+━━━━━━━━━━━━━━━━━━━━
+⚡ Complexity Analysis
+━━━━━━━━━━━━━━━━━━━━
+Provide:
+- Time Complexity
+- Space Complexity
+- Hidden STL complexities
+- Recursion stack complexity if applicable
+
+Explain:
+- WHY the complexity occurs
+- Which operations dominate runtime
+
+━━━━━━━━━━━━━━━━━━━━
+🔍 Deep Optimization Review
+━━━━━━━━━━━━━━━━━━━━
+Analyze the code for:
+
+Performance Issues:
+- Unnecessary loops
+- Extra traversals
+- Repeated calculations
+- Redundant conditions
+- Unnecessary sorting
+- Unnecessary copying
+- Inefficient STL usage
+- Avoidable recursion
+- Unnecessary memory usage
+
+Space Optimization:
+- Can extra arrays/vectors/maps be removed?
+- Can the solution be converted to O(1) extra space?
+- Can in-place modification be used safely?
+
+Code Quality:
+- Poor naming
+- Large repetitive blocks
+- Bad readability
+- Unsafe indexing
+- Overflow risks
+- Risky pointer usage
+- Unclear logic
+- Hardcoded behavior
+
+Interview Review:
+- Would this pass a real FAANG interview?
+- Is the solution easy to explain verbally?
+- Does the code look polished?
+- Does it demonstrate strong DSA understanding?
+
+━━━━━━━━━━━━━━━━━━━━
+🚀 Improvement Suggestions
+━━━━━━━━━━━━━━━━━━━━
+Tell the user:
+- EXACTLY where the code can improve
+- Whether a better algorithm exists
+- Whether STL can simplify the implementation
+- Whether time or space can be reduced
+- Whether readability should be prioritized over micro-optimization
+- Whether this solution scales for large constraints
+
+IMPORTANT:
+Even if the code is accepted,
+still suggest:
+- Cleaner syntax
+- Better variable names
+- Better loops
+- Better conditions
+- Better STL usage
+- Better interview structure
+
+━━━━━━━━━━━━━━━━━━━━
+✨ Improved Code
+━━━━━━━━━━━━━━━━━━━━
+Generate:
+
+1. Cleaner Version
+- More readable
+- Better structure
+- Better naming
+
+2. Optimized Version
+- Best practical optimization
+
+3. Interview Version
+- Most ideal version to write in interviews
+
+Preserve correctness.
+
+━━━━━━━━━━━━━━━━━━━━
+📌 Line-by-Line Suggestions
+━━━━━━━━━━━━━━━━━━━━
+Review important lines individually.
+
+Explain:
+- Why something is inefficient
+- Why a condition can be simplified
+- Why pass-by-reference matters
+- Why a data structure choice is weak/strong
+- Why memory usage can be reduced
+
+━━━━━━━━━━━━━━━━━━━━
+🧪 Edge Cases
+━━━━━━━━━━━━━━━━━━━━
+Mention:
+- Important edge cases
+- Whether the current code handles them
+- Any hidden failing scenarios
+
+━━━━━━━━━━━━━━━━━━━━
+🔄 Alternative Approaches
+━━━━━━━━━━━━━━━━━━━━
+If better approaches exist:
+- Explain brute force
+- Better approach
+- Optimal approach
+
+Compare all approaches.
+
+━━━━━━━━━━━━━━━━━━━━
+📊 Final Evaluation
+━━━━━━━━━━━━━━━━━━━━
+Rate out of 10:
+- Correctness
+- Optimization
+- Readability
+- Interview Quality
+- STL Usage
+- Overall Solution Strength
+
+Be highly technical and specific.
+Avoid generic praise.
+Provide actionable engineering-level feedback.`;
+
+      const prompt = `User's Code:
+\`\`\`
+${code}
+\`\`\`
+
+Problem Context:
+Title: ${currentProblem.title}
+Difficulty: ${currentProblem.difficulty}
+Topics: ${currentProblem.topics.join(', ')}
+URL: ${currentProblem.url}`;
+
+      try {
+        const review = await callGeminiApi(apiKey, prompt, systemPrompt);
+        sendResponse({ review });
+      } catch (err) {
+        console.error('LeetCode Companion (Background): Gemini API Error:', err);
+        sendResponse({ error: err instanceof Error ? err.message : String(err) });
+      }
+    });
+    return true; // Keep message channel open for async response
   }
   return true; // Use true to indicate asynchronous response callback
 });

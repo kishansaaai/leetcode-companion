@@ -100,6 +100,7 @@ export interface ExtensionSettings {
   showContestHistory: boolean;
   showPredictions: boolean;
   cacheExpiry: number; // hours
+  geminiApiKey?: string;
 }
 
 export interface CacheEntry<T> {
