@@ -63,8 +63,8 @@ if (chrome.commands) {
   });
 }
 
-async function callGeminiApi(apiKey: string, prompt: string, systemPrompt: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+async function callGeminiApi(apiKey: string, prompt: string, systemPrompt: string, model: string = 'gemini-2.5-flash'): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -317,11 +317,17 @@ Topics: ${currentProblem.topics.join(', ')}
 URL: ${currentProblem.url}`;
 
       try {
-        const review = await callGeminiApi(apiKey, prompt, systemPrompt);
+        const review = await callGeminiApi(apiKey, prompt, systemPrompt, 'gemini-2.5-flash');
         sendResponse({ review });
       } catch (err) {
-        console.error('LeetCode Companion (Background): Gemini API Error:', err);
-        sendResponse({ error: err instanceof Error ? err.message : String(err) });
+        console.warn('Gemini 2.5 Flash failed, attempting fallback to Gemini 1.5 Flash...', err);
+        try {
+          const review = await callGeminiApi(apiKey, prompt, systemPrompt, 'gemini-1.5-flash');
+          sendResponse({ review });
+        } catch (fallbackErr) {
+          console.error('LeetCode Companion (Background): Both Gemini models failed:', fallbackErr);
+          sendResponse({ error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr) });
+        }
       }
     });
     return true; // Keep message channel open for async response
