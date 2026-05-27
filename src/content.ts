@@ -97,6 +97,24 @@ function init() {
       renderSidebarContent();
     }
   });
+
+  // Start dynamic code sync interval to poll LeetCode editor changes
+  setInterval(() => {
+    // Only sync if sidebar is open and we are on the AI Review tab
+    if (!isSidebarOpen || activeTabId !== 'ai-review') return;
+
+    if (shadowRoot) {
+      const textarea = shadowRoot.querySelector('.lc-review-textarea') as HTMLTextAreaElement | null;
+      // If textarea is not focused, auto-sync it with the page editor
+      if (textarea && document.activeElement !== textarea && shadowRoot.activeElement !== textarea) {
+        const currentCode = scrapeCodeFromPage();
+        if (currentCode && currentCode !== lastScrapedCode) {
+          lastScrapedCode = currentCode;
+          textarea.value = currentCode;
+        }
+      }
+    }
+  }, 1000);
 }
 
 /**
@@ -557,6 +575,19 @@ function renderSidebarContent() {
 
   // --- TAB 4: AI REVIEW ---
   if (activeTabId === 'ai-review') {
+    // Dynamically sync code before render if not focused
+    const currentCode = scrapeCodeFromPage();
+    if (currentCode) {
+      if (shadowRoot) {
+        const textarea = shadowRoot.querySelector('.lc-review-textarea') as HTMLTextAreaElement | null;
+        if (!textarea || (document.activeElement !== textarea && shadowRoot.activeElement !== textarea)) {
+          lastScrapedCode = currentCode;
+        }
+      } else {
+        lastScrapedCode = currentCode;
+      }
+    }
+
     htmlContent += `<div class="lc-tab-panel active">`;
     
     const apiKey = settings.geminiApiKey;
@@ -572,18 +603,15 @@ function renderSidebarContent() {
       htmlContent += `
         <div class="lc-section-header">AI Code Review & Optimizer</div>
         <div class="lc-review-container">
-          <div style="font-size: 11px; opacity: 0.6; margin-bottom: 8px;">Submit your code below or auto-extract it directly from your LeetCode code editor window.</div>
+          <div style="font-size: 11px; opacity: 0.6; margin-bottom: 8px;">Your code is dynamically synced from the LeetCode editor. Click analyze to get feedback.</div>
           
-          <div class="lc-review-action-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <button class="lc-review-action-btn scrape" style="flex: 1;">
-              📥 Scrape Editor Code
-            </button>
-            <button class="lc-review-action-btn analyze" style="flex: 1; background: #6366f1; color: white;">
+          <div class="lc-review-action-row" style="margin-bottom: 10px;">
+            <button class="lc-review-action-btn analyze" style="width: 100%; background: #6366f1; color: white; justify-content: center;">
               🚀 Run AI Analysis
             </button>
           </div>
 
-          <textarea class="lc-review-textarea" placeholder="Paste your solution code here (or click Scrape Editor Code)..." spellcheck="false">${lastScrapedCode}</textarea>
+          <textarea class="lc-review-textarea" placeholder="Your solution code will automatically sync here..." spellcheck="false">${lastScrapedCode}</textarea>
           
           <div class="lc-review-output" style="margin-top: 16px;"></div>
         </div>
@@ -739,7 +767,6 @@ function renderSidebarContent() {
   if (activeTabId === 'ai-review') {
     const textarea = sidebarElement.querySelector('.lc-review-textarea') as HTMLTextAreaElement | null;
     const outputDiv = sidebarElement.querySelector('.lc-review-output') as HTMLDivElement | null;
-    const scrapeBtn = sidebarElement.querySelector('.lc-review-action-btn.scrape');
     const analyzeBtn = sidebarElement.querySelector('.lc-review-action-btn.analyze');
 
     if (textarea) {
@@ -771,23 +798,11 @@ function renderSidebarContent() {
       }
     }
 
-    if (scrapeBtn && textarea) {
-      scrapeBtn.addEventListener('click', () => {
-        const code = scrapeCodeFromPage();
-        if (code) {
-          lastScrapedCode = code;
-          textarea.value = code;
-        } else {
-          alert('Failed to automatically locate LeetCode editor code. Please paste your code manually.');
-        }
-      });
-    }
-
     if (analyzeBtn && textarea) {
       analyzeBtn.addEventListener('click', () => {
         const code = textarea.value.trim();
         if (!code) {
-          alert('Please enter or scrape your code first.');
+          alert('Please enter your code first.');
           return;
         }
 
