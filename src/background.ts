@@ -144,7 +144,12 @@ chrome.runtime.onMessage.addListener((message: MessagePayload, sender, sendRespo
       const apiKey = settings?.geminiApiKey;
 
       if (!apiKey) {
-        sendResponse({ error: 'Gemini API Key is missing. Please configure it in the extension settings popup.' });
+        if (sender.tab && sender.tab.id) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            type: 'ANALYZE_CODE_RESPONSE',
+            payload: { error: 'Gemini API Key is missing. Please configure it in the extension settings popup.' }
+          });
+        }
         return;
       }
 
@@ -318,19 +323,33 @@ URL: ${currentProblem.url}`;
 
       try {
         const review = await callGeminiApi(apiKey, prompt, systemPrompt, 'gemini-2.5-flash');
-        sendResponse({ review });
+        if (sender.tab && sender.tab.id) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            type: 'ANALYZE_CODE_RESPONSE',
+            payload: { review }
+          });
+        }
       } catch (err) {
         console.warn('Gemini 2.5 Flash failed, attempting fallback to Gemini 1.5 Flash...', err);
         try {
           const review = await callGeminiApi(apiKey, prompt, systemPrompt, 'gemini-1.5-flash');
-          sendResponse({ review });
+          if (sender.tab && sender.tab.id) {
+            chrome.tabs.sendMessage(sender.tab.id, {
+              type: 'ANALYZE_CODE_RESPONSE',
+              payload: { review }
+            });
+          }
         } catch (fallbackErr) {
           console.error('LeetCode Companion (Background): Both Gemini models failed:', fallbackErr);
-          sendResponse({ error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr) });
+          if (sender.tab && sender.tab.id) {
+            chrome.tabs.sendMessage(sender.tab.id, {
+              type: 'ANALYZE_CODE_RESPONSE',
+              payload: { error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr) }
+            });
+          }
         }
       }
     });
-    return true; // Keep message channel open for async response
   }
   return true; // Use true to indicate asynchronous response callback
 });

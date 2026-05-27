@@ -85,6 +85,16 @@ function init() {
       renderSidebarContent();
     } else if (message.type === 'TOGGLE_SIDEBAR') {
       toggleSidebar();
+    } else if (message.type === 'ANALYZE_CODE_RESPONSE') {
+      isAnalyzingCode = false;
+      if (message.payload.error) {
+        analysisError = message.payload.error;
+      } else if (message.payload.review) {
+        lastAnalysisResult = message.payload.review;
+      } else {
+        analysisError = 'Unknown response payload received.';
+      }
+      renderSidebarContent();
     }
   });
 }
@@ -792,16 +802,6 @@ function renderSidebarContent() {
             code,
             currentProblem
           }
-        }, (response) => {
-          isAnalyzingCode = false;
-          if (response?.error) {
-            analysisError = response.error;
-          } else if (response?.review) {
-            lastAnalysisResult = response.review;
-          } else {
-            analysisError = 'Unknown response payload received.';
-          }
-          renderSidebarContent(); // re-render to display result
         });
       });
     }
