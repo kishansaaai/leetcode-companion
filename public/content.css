@@ -1546,3 +1546,225 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ─── Daily Solve Streak & Activity Styles ─── */
+.lc-streak-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.15);
+  animation: lc-streak-pulse 2s infinite ease-in-out;
+}
+.lc-sidebar.theme-light .lc-streak-badge {
+  background: rgba(249, 115, 22, 0.08);
+  color: #ea580c;
+  border-color: rgba(249, 115, 22, 0.2);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.1);
+}
+@keyframes lc-streak-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(249, 115, 22, 0.15); }
+  50% { transform: scale(1.03); box-shadow: 0 0 18px rgba(249, 115, 22, 0.25); }
+}
+
+.lc-solve-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  color: #9ca3af;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lc-solve-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #10b981;
+}
+.lc-sidebar.theme-light .lc-solve-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #059669;
+}
+.lc-solve-btn.active {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+}
+.lc-sidebar.theme-light .lc-solve-btn.active {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.2);
+  box-shadow: 0 0 8px rgba(5, 150, 105, 0.15);
+}
+
+/* Celebration Animation */
+.lc-celebrate-pulse {
+  animation: lc-solve-celebrate 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes lc-solve-celebrate {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.4); box-shadow: 0 0 24px rgba(16, 185, 129, 0.8); }
+  100% { transform: scale(1); }
+}
+
+.lc-confetti-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 1;
+  z-index: 1000;
+  animation: lc-confetti-fall 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+@keyframes lc-confetti-fall {
+  0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); opacity: 1; }
+  80% { opacity: 0.8; }
+  100% { transform: translate3d(var(--tx), var(--ty), 0) scale(0) rotate(var(--rot)); opacity: 0; }
+}
+
+/* Streak card details inside Patterns tab */
+.lc-streak-container {
+  margin-bottom: 20px;
+}
+.lc-streak-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(129, 140, 248, 0.02) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.15);
+  box-shadow: 0 8px 32px rgba(249, 115, 22, 0.05), inset 0 0 40px rgba(255, 255, 255, 0.01);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lc-sidebar.theme-light .lc-streak-card {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.04) 0%, rgba(79, 70, 229, 0.01) 100%);
+  border-color: rgba(249, 115, 22, 0.12);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.03);
+}
+.lc-streak-card:hover {
+  border-color: rgba(249, 115, 22, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(249, 115, 22, 0.12);
+}
+
+.lc-streak-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lc-streak-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+.lc-sidebar.theme-light .lc-streak-card-title {
+  color: #475569;
+}
+.lc-streak-card-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #f97316;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.3);
+}
+
+.lc-streak-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.lc-streak-main-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lc-streak-number {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 40px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 50%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.lc-streak-fire {
+  font-size: 34px;
+  line-height: 1;
+  animation: lc-fire-dance 1s infinite alternate ease-in-out;
+}
+@keyframes lc-fire-dance {
+  0% { transform: scale(1) rotate(-3deg); }
+  100% { transform: scale(1.08) rotate(3deg); }
+}
+
+.lc-streak-message {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* Activity contribution board styles */
+.lc-activity-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.lc-sidebar.theme-light .lc-activity-grid {
+  border-top-color: rgba(0, 0, 0, 0.05);
+}
+
+.lc-activity-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.lc-activity-day-name {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.4;
+  text-transform: uppercase;
+}
+.lc-activity-day-block {
+  width: 100%;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.3s ease;
+  position: relative;
+}
+.lc-sidebar.theme-light .lc-activity-day-block {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.03);
+}
+
+.lc-activity-day.solved .lc-activity-day-block {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.35);
+}
+.lc-activity-day.solved:hover .lc-activity-day-block {
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+  transform: scale(1.08);
+}
+

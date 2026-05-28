@@ -32,12 +32,21 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
 
 // Initialize settings on installation
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['settings', 'bookmarks'], (result) => {
+  chrome.storage.local.get(['settings', 'bookmarks', 'streak'], (result) => {
     if (!result.settings) {
       chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
     }
     if (!result.bookmarks) {
       chrome.storage.local.set({ bookmarks: [] });
+    }
+    if (!result.streak) {
+      chrome.storage.local.set({ 
+        streak: { 
+          currentStreak: 0, 
+          lastSolvedDate: '', 
+          solvedHistory: [] 
+        } 
+      });
     }
   });
 });

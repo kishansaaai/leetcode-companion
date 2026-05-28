@@ -473,6 +473,58 @@
       background-color: rgba(0, 0, 0, 0.03);
       border-color: rgba(0, 0, 0, 0.05);
     }
+
+    /* Daily solve streak card styling in popup */
+    .streak-section {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%);
+      border: 1px solid rgba(249, 115, 22, 0.15);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    body.theme-light .streak-section {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.04) 0%, rgba(0, 0, 0, 0.005) 100%);
+      border-color: rgba(249, 115, 22, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+
+    .popup-activity-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .popup-activity-day-name {
+      font-size: 8px;
+      font-weight: 600;
+      opacity: 0.4;
+      text-transform: uppercase;
+    }
+    .popup-activity-day-block {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
+    }
+    body.theme-light .popup-activity-day-block {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.04);
+    }
+    .popup-activity-day.solved .popup-activity-day-block {
+      background: #f97316;
+      border-color: rgba(249, 115, 22, 0.3);
+      box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+    }
+    
+    @keyframes lc-fire-dance {
+      0% { transform: scale(1) rotate(-3deg); }
+      100% { transform: scale(1.1) rotate(3deg); }
+    }
   </style>
 </head>
 <body>
@@ -482,6 +534,21 @@
       <input type="checkbox" id="isEnabled">
       <span class="slider"></span>
     </label>
+  </div>
+
+  <div class="streak-section" id="popupStreakSection" style="display: none;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 24px; animation: lc-fire-dance 1s infinite alternate ease-in-out; display: inline-block;">🔥</span>
+        <div>
+          <div style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2;" id="popupStreakCount">0 Day Streak</div>
+          <div style="font-size: 9px; opacity: 0.6;" id="popupStreakDesc">Solve a problem today!</div>
+        </div>
+      </div>
+      <div class="popup-activity-grid" id="popupActivityGrid" style="display: flex; gap: 4px;">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
   </div>
 
   <div class="settings-section">

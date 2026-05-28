@@ -1,9 +1,10 @@
 import { PROBLEM_DB, getProblemBySlug, getProblemsByCompany, ALL_COMPANIES } from './data/problemDatabase';
-import type { ExtensionSettings, CompanyTag } from './types';
+import type { ExtensionSettings, CompanyTag, StreakState } from './types';
 
 // Global popup state
 let settings: ExtensionSettings;
 let bookmarks: string[] = [];
+let streak: StreakState;
 
 // DOM Elements
 const isEnabledInput = document.getElementById('isEnabled') as HTMLInputElement;
@@ -26,8 +27,8 @@ const UNIQUE_COMPANIES = ALL_COMPANIES;
 
 // Initialize Popup
 function init() {
-  // Load settings and bookmarks from chrome storage
-  chrome.storage.local.get(['settings', 'bookmarks'], (result) => {
+  // Load settings, bookmarks, and streak from chrome storage
+  chrome.storage.local.get(['settings', 'bookmarks', 'streak'], (result) => {
     if (result.settings) {
       settings = result.settings;
       populateSettingsUI();
@@ -36,6 +37,10 @@ function init() {
     if (result.bookmarks) {
       bookmarks = result.bookmarks;
       renderBookmarks();
+    }
+    if (result.streak) {
+      streak = result.streak;
+      renderPopupStreak();
     }
   });
 
@@ -321,6 +326,77 @@ function renderCompanyProblems(company: CompanyTag) {
     item.appendChild(freqBadge);
     companyProblemsListContainer.appendChild(item);
   });
+}
+
+/**
+ * Gets local date string in YYYY-MM-DD format.
+ */
+function getLocalDateString(): string {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().split('T')[0];
+}
+
+/**
+ * Render streak panel dashboard in the popup dynamically.
+ */
+function renderPopupStreak() {
+  const streakSection = document.getElementById('popupStreakSection') as HTMLDivElement;
+  const streakCount = document.getElementById('popupStreakCount') as HTMLDivElement;
+  const streakDesc = document.getElementById('popupStreakDesc') as HTMLDivElement;
+  const activityGrid = document.getElementById('popupActivityGrid') as HTMLDivElement;
+
+  if (!streakSection || !streakCount || !streakDesc || !activityGrid) return;
+
+  if (!streak || streak.currentStreak === 0) {
+    streakSection.style.display = 'none';
+    return;
+  }
+
+  // Display streak section
+  streakSection.style.display = 'block';
+
+  // Set streak count text
+  streakCount.textContent = `${streak.currentStreak} Day Streak`;
+
+  // Set streak desc text
+  const todayStr = getLocalDateString();
+  const solvedToday = streak.solvedHistory.some(p => p.dateString === todayStr);
+  if (solvedToday) {
+    streakDesc.textContent = 'Streak protected for today! 🎉';
+  } else {
+    streakDesc.textContent = 'Solve a problem today to continue! ⚡';
+  }
+
+  // Render last 7 days mini-blocks
+  activityGrid.innerHTML = '';
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const nowTimestamp = Date.now();
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(nowTimestamp - i * 24 * 60 * 60 * 1000);
+    const dayOffset = d.getTimezoneOffset();
+    const localD = new Date(d.getTime() - (dayOffset * 60 * 1000));
+    const dateStr = localD.toISOString().split('T')[0];
+    const name = daysOfWeek[d.getDay()];
+    const isSolved = streak.solvedHistory.some(p => p.dateString === dateStr);
+
+    const blockContainer = document.createElement('div');
+    blockContainer.className = `popup-activity-day ${isSolved ? 'solved' : ''}`;
+    blockContainer.title = `${dateStr}${isSolved ? ': Solved!' : ': No solves'}`;
+
+    const label = document.createElement('span');
+    label.className = 'popup-activity-day-name';
+    label.textContent = name[0];
+
+    const block = document.createElement('div');
+    block.className = 'popup-activity-day-block';
+
+    blockContainer.appendChild(label);
+    blockContainer.appendChild(block);
+    activityGrid.appendChild(blockContainer);
+  }
 }
 
 // Start core execution

@@ -7,7 +7,9 @@ import type {
   ContestInfo, 
   ExtensionSettings,
   LeetCodeProblem,
-  CompanyTag
+  CompanyTag,
+  StreakState,
+  SolvedProblem
 } from './types';
 
 console.log('LeetCode Companion: Content script loaded.');
@@ -28,6 +30,11 @@ let settings: ExtensionSettings = {
   cacheExpiry: 24
 };
 let bookmarks: string[] = [];
+let streak: StreakState = {
+  currentStreak: 0,
+  lastSolvedDate: '',
+  solvedHistory: []
+};
 let activeTabId = 'similar-problems';
 let isSidebarOpen = false;
 let selectedCompanyFilter: string | null = null;
@@ -48,14 +55,17 @@ let modalElement: HTMLDivElement | null = null;
 // Initialize Content Script
 function init() {
   console.log('LeetCode Companion: Initializing content script...');
-  // Read initial settings and bookmarks, then start URL observer
-  chrome.storage.local.get(['settings', 'bookmarks'], (result) => {
+  // Read initial settings, bookmarks, and streak, then start URL observer
+  chrome.storage.local.get(['settings', 'bookmarks', 'streak'], (result) => {
     console.log('LeetCode Companion: Loaded settings from storage:', result.settings);
     if (result.settings) {
       settings = result.settings;
     }
     if (result.bookmarks) {
       bookmarks = result.bookmarks;
+    }
+    if (result.streak) {
+      streak = result.streak;
     }
 
     if (!settings.isEnabled) {
@@ -67,7 +77,7 @@ function init() {
     startUrlObserver();
   });
 
-  // Listen to chrome storage changes to synchronize bookmarks/settings instantly
+  // Listen to chrome storage changes to synchronize bookmarks/settings/streaks instantly
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.settings) {
       settings = changes.settings.newValue;
@@ -75,6 +85,10 @@ function init() {
     }
     if (changes.bookmarks) {
       bookmarks = changes.bookmarks.newValue;
+      renderSidebarContent();
+    }
+    if (changes.streak) {
+      streak = changes.streak.newValue;
       renderSidebarContent();
     }
   });
@@ -116,6 +130,11 @@ function init() {
       }
     }
   }, 1000);
+
+  // Poll for Accepted submission status to auto-increment streak
+  setInterval(() => {
+    detectAcceptedSubmission();
+  }, 2000);
 }
 
 /**
@@ -402,6 +421,8 @@ function renderSidebarContent() {
 
   const { currentProblem, relatedProblems, companyInsights, contestHistory, pairFrequency, nextPredictions } = currentData;
   const isBookmarked = bookmarks.includes(currentProblem.slug);
+  const todayDateStr = getLocalDateString();
+  const isSolvedToday = streak.solvedHistory.some(p => p.slug === currentProblem.slug && p.dateString === todayDateStr);
 
   let htmlContent = `
     <!-- Header -->
@@ -409,10 +430,20 @@ function renderSidebarContent() {
       <div class="lc-meta-section">
         <span class="lc-id-badge">#${currentProblem.id || '???'}</span>
         <span class="lc-diff-badge ${currentProblem.difficulty.toLowerCase()}">${currentProblem.difficulty}</span>
+        ${streak.currentStreak > 0 ? `
+          <span class="lc-streak-badge" title="Your current solve streak! Keep it up!">
+            🔥 ${streak.currentStreak} Day${streak.currentStreak === 1 ? '' : 's'}
+          </span>
+        ` : ''}
       </div>
       <div class="lc-title-row">
         <h2 class="lc-problem-title" title="${currentProblem.title}">${currentProblem.title}</h2>
         <div class="lc-action-btns">
+          <button class="lc-solve-btn ${isSolvedToday ? 'active' : ''}" title="${isSolvedToday ? 'Solved Today! Click to undo.' : 'Mark as Solved Today'}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
           <button class="lc-bookmark-btn ${isBookmarked ? 'active' : ''}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Problem'}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -579,6 +610,52 @@ function renderSidebarContent() {
   if (activeTabId === 'patterns') {
     htmlContent += `<div class="lc-tab-panel active">`;
 
+    // Generate the last 7 days activity grid
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const last7Days: { name: string; dateStr: string; isSolved: boolean }[] = [];
+    const nowTimestamp = Date.now();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(nowTimestamp - i * 24 * 60 * 60 * 1000);
+      const dayOffset = d.getTimezoneOffset();
+      const localD = new Date(d.getTime() - (dayOffset * 60 * 1000));
+      const dateStr = localD.toISOString().split('T')[0];
+      const name = daysOfWeek[d.getDay()];
+      const isSolved = streak.solvedHistory.some(p => p.dateString === dateStr);
+      last7Days.push({ name, dateStr, isSolved });
+    }
+
+    const gridHtml = last7Days.map(day => `
+      <div class="lc-activity-day ${day.isSolved ? 'solved' : ''}" title="${day.dateStr}${day.isSolved ? ': Solved!' : ': No solves'}">
+        <span class="lc-activity-day-name">${day.name[0]}</span>
+        <div class="lc-activity-day-block"></div>
+      </div>
+    `).join('');
+
+    htmlContent += `
+      <div class="lc-streak-container">
+        <div class="lc-streak-card">
+          <div class="lc-streak-header">
+            <span class="lc-streak-card-title">Daily Practice Streak</span>
+            <span class="lc-streak-card-badge">${streak.currentStreak} Day${streak.currentStreak === 1 ? '' : 's'}</span>
+          </div>
+          <div class="lc-streak-body">
+            <div class="lc-streak-main-value">
+              <span class="lc-streak-number">${streak.currentStreak}</span>
+              <span class="lc-streak-fire">🔥</span>
+            </div>
+            <div class="lc-streak-message">
+              ${streak.currentStreak > 0 
+                ? `You're on a roll! Keep solving daily to build your practice habit!` 
+                : `Solve a problem today to kickstart your practice streak! 🚀`}
+            </div>
+          </div>
+          <div class="lc-activity-grid">
+            ${gridHtml}
+          </div>
+        </div>
+      </div>
+    `;
+
     // 1. Contest History
     if (settings.showContestHistory && contestHistory && contestHistory.length > 0) {
       htmlContent += `
@@ -695,6 +772,10 @@ function renderSidebarContent() {
   
   sidebarElement.querySelector('.lc-bookmark-btn')?.addEventListener('click', () => {
     toggleBookmark(currentProblem.slug);
+  });
+
+  sidebarElement.querySelector('.lc-solve-btn')?.addEventListener('click', () => {
+    toggleSolved(currentProblem.slug, currentProblem.title, currentProblem.difficulty);
   });
 
   const tabLinks = sidebarElement.querySelectorAll('.lc-tab-link');
@@ -1126,6 +1207,139 @@ function toggleBookmark(slug: string) {
 }
 
 /**
+ * Gets local date string in YYYY-MM-DD format.
+ */
+function getLocalDateString(): string {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().split('T')[0];
+}
+
+/**
+ * Calculates current consecutive streak from sorted unique date strings.
+ */
+function calculateStreakFromDates(dates: string[]): number {
+  if (dates.length === 0) return 0;
+  const sortedDates = [...dates].sort();
+  const todayStr = getLocalDateString();
+  const yesterday = new Date(Date.now() - 86400000);
+  const yesterdayOffset = yesterday.getTimezoneOffset();
+  const yesterdayLocal = new Date(yesterday.getTime() - (yesterdayOffset * 60 * 1000));
+  const yesterdayStr = yesterdayLocal.toISOString().split('T')[0];
+
+  const lastDate = sortedDates[sortedDates.length - 1];
+  if (lastDate !== todayStr && lastDate !== yesterdayStr) {
+    return 0;
+  }
+
+  let currentStreak = 1;
+  for (let i = sortedDates.length - 1; i > 0; i--) {
+    const currStr = sortedDates[i];
+    const prevStr = sortedDates[i - 1];
+    
+    const curr = new Date(currStr);
+    const prev = new Date(prevStr);
+    const diffTime = Math.abs(curr.getTime() - prev.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) {
+      currentStreak++;
+    } else if (diffDays > 1) {
+      break;
+    }
+  }
+  return currentStreak;
+}
+
+/**
+ * Plays a beautiful CSS confetti explosion when solving a problem.
+ */
+function triggerCelebrationAnimation() {
+  if (!sidebarElement) return;
+  
+  const solveBtn = sidebarElement.querySelector('.lc-solve-btn');
+  if (solveBtn) {
+    solveBtn.classList.add('lc-celebrate-pulse');
+    setTimeout(() => solveBtn.classList.remove('lc-celebrate-pulse'), 800);
+  }
+
+  const header = sidebarElement.querySelector('.lc-header') as HTMLElement;
+  if (header) {
+    for (let i = 0; i < 20; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'lc-confetti-dot';
+      const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f97316'];
+      dot.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      dot.style.left = `${65 + (Math.random() - 0.5) * 20}%`;
+      dot.style.top = `${40 + (Math.random() - 0.5) * 20}%`;
+      dot.style.setProperty('--tx', `${(Math.random() - 0.5) * 240}px`);
+      dot.style.setProperty('--ty', `${-(Math.random() * 160 + 60)}px`);
+      dot.style.setProperty('--rot', `${Math.random() * 720}deg`);
+      header.appendChild(dot);
+      setTimeout(() => dot.remove(), 1200);
+    }
+  }
+}
+
+/**
+ * Toggles solved state for the current problem and updates local daily streak.
+ */
+function toggleSolved(slug: string, title: string, difficulty: 'Easy' | 'Medium' | 'Hard') {
+  chrome.storage.local.get(['streak'], (result) => {
+    let currentStreakState: StreakState = result.streak || {
+      currentStreak: 0,
+      lastSolvedDate: '',
+      solvedHistory: []
+    };
+
+    const today = getLocalDateString();
+    const history = [...currentStreakState.solvedHistory];
+    const existingIndex = history.findIndex(p => p.slug === slug && p.dateString === today);
+
+    if (existingIndex > -1) {
+      history.splice(existingIndex, 1);
+      
+      const solvedDates = Array.from(new Set(history.map(p => p.dateString))).sort();
+      let newStreak = 0;
+      let lastSolved = '';
+      
+      if (solvedDates.length > 0) {
+        newStreak = calculateStreakFromDates(solvedDates);
+        lastSolved = solvedDates[solvedDates.length - 1];
+      }
+      
+      currentStreakState.currentStreak = newStreak;
+      currentStreakState.lastSolvedDate = lastSolved;
+      currentStreakState.solvedHistory = history;
+    } else {
+      const newSolved: SolvedProblem = {
+        slug,
+        title,
+        difficulty,
+        solvedAt: Date.now(),
+        dateString: today
+      };
+      history.push(newSolved);
+
+      const solvedDates = Array.from(new Set(history.map(p => p.dateString))).sort();
+      let newStreak = calculateStreakFromDates(solvedDates);
+      
+      currentStreakState.currentStreak = newStreak;
+      currentStreakState.lastSolvedDate = today;
+      currentStreakState.solvedHistory = history;
+
+      triggerCelebrationAnimation();
+    }
+
+    chrome.storage.local.set({ streak: currentStreakState }, () => {
+      streak = currentStreakState;
+      renderSidebarContent();
+    });
+  });
+}
+
+/**
  * Escapes HTML entities inside code block parsing.
  */
 function escapeHTML(str: string): string {
@@ -1310,6 +1524,30 @@ function closeCodeModal() {
   if (rootContainer) {
     rootContainer.style.width = '0';
     rootContainer.style.height = '0';
+  }
+}
+
+/**
+ * Automatically detects green "Accepted" text on the LeetCode page to log a streak update!
+ */
+function detectAcceptedSubmission() {
+  if (!currentSlug) return;
+  const todayStr = getLocalDateString();
+  
+  // Skip if we already marked this solved today
+  const alreadySolvedToday = streak.solvedHistory.some(p => p.slug === currentSlug && p.dateString === todayStr);
+  if (alreadySolvedToday) return;
+
+  // Query common green Accepted labels in LeetCode page
+  const greenTexts = Array.from(document.querySelectorAll('.text-green-s, .text-success, [data-e2e-locator="submission-result"], .success__3ZPr'));
+  const hasAccepted = greenTexts.some(el => el.textContent?.trim().includes('Accepted'));
+
+  if (hasAccepted) {
+    console.log('LeetCode Companion: Detected "Accepted" solution on page! Auto-marking solved to keep streak...');
+    if (currentData && currentData.currentProblem) {
+      const { slug, title, difficulty } = currentData.currentProblem;
+      toggleSolved(slug, title, difficulty);
+    }
   }
 }
 

@@ -127,3 +127,18 @@ export interface DataResponseMessage extends MessagePayload {
   type: 'DATA_RESPONSE';
   payload: Partial<SidebarData>;
 }
+
+export interface SolvedProblem {
+  slug: string;
+  title: string;
+  difficulty: Difficulty;
+  solvedAt: number; // timestamp
+  dateString: string; // YYYY-MM-DD
+}
+
+export interface StreakState {
+  currentStreak: number;
+  lastSolvedDate: string; // YYYY-MM-DD
+  solvedHistory: SolvedProblem[];
+}
+
